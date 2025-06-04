@@ -5,7 +5,6 @@ import 'package:ulusalbarter/urunekle.dart';
 import 'package:ulusalbarter/urunprofil.dart';
 
 import 'appDrawer.dart';
-import 'bakiye.dart';
 import 'main.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -230,24 +229,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     style: const TextStyle(fontSize: 12, color: Colors.black54),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 48, top: 8),
-                  child: userData?['isAdmin'] == true
-                      ? ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const Bakiye()),
-                      );
-                    },
-                    child: const Text('Bakiye Takip'),
-                  )
-                      : Text(
-                    'Bakiye: ${userData?['bakiye'] ?? '0'}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-
                 const SizedBox(height: 8),
                 if (userData?['role'] == 'admin')
                   SingleChildScrollView(
