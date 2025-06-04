@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "862325738779",
+    "project_id": "ulusal-barter",
+    "storage_bucket": "ulusal-barter.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:862325738779:android:42c6edd577e72de49cd7be",
+        "android_client_info": {
+          "package_name": "com.example.ulusalbarter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDVdnZ79JiblpmZFfiVl_a1d2t-ficVX9w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
