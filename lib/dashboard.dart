@@ -5,6 +5,7 @@ import 'package:ulusalbarter/urunekle.dart';
 import 'package:ulusalbarter/urunprofil.dart';
 
 import 'appDrawer.dart';
+import 'bakiye.dart';
 import 'main.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -212,10 +213,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Menü ikonu sola yerleştirildi, bu yazı biraz sağa kayabilir
-                const SizedBox(height: 8), // Üstten boşluk verelim
+                const SizedBox(height: 8),
                 Padding(
-                  padding: const EdgeInsets.only(left: 48), // Menü ikonu boşluğu kadar soldan kaydır
+                  padding: const EdgeInsets.only(left: 48),
                   child: Text(
                     'Hoşgeldiniz, ${userData?['ad'] ?? ''} ${userData?['soyad'] ?? ''}',
                     style: const TextStyle(fontSize: 18),
@@ -229,15 +229,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     style: const TextStyle(fontSize: 12, color: Colors.black54),
                   ),
                 ),
+
                 const SizedBox(height: 8),
+
                 if (userData?['role'] == 'admin')
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            backgroundColor: Colors.red[900], // kırmızı 900
+                            foregroundColor: Colors.white, // beyaz yazı
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const Bakiye()),
+                            );
+                          },
+                          child: const Text('Bakiye Takip'),
+                        ),
+                        const SizedBox(width: 8),
                         _buildRedButton(
                           label: 'Ürün Ekle',
-                          color: Colors.red[900]!, // Koyu kırmızı
+                          color: Colors.red[700]!,
                           onPressed: () {
                             Navigator.push(
                               context,
@@ -248,7 +267,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const SizedBox(width: 8),
                         _buildRedButton(
                           label: 'İstekler',
-                          color: Colors.red, // Normal kırmızı
+                          color: Colors.red[500]!,
                           trailing: pendingRequests.isNotEmpty
                               ? CircleAvatar(
                             radius: 8,
@@ -274,7 +293,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const SizedBox(width: 8),
                         _buildRedButton(
                           label: 'Filtre',
-                          color: Colors.red[200]!, // Açık kırmızı
+                          color: Colors.red[300]!,
                           onPressed: () {
                             setState(() {
                               showFilterMobile = true;
@@ -283,10 +302,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ],
                     ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8, top: 8),
+                    child: Text(
+                      'Barter Bakiyesi: ${userData?['bakiye'] ?? '0'}',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red),
+                    ),
                   ),
               ],
             ),
           ),
+
           actions: [
             IconButton(
               icon: const Icon(Icons.logout),

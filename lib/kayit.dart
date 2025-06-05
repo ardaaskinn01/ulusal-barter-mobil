@@ -54,6 +54,7 @@ class _KayitEkraniState extends State<KayitEkrani> {
           'email': email,
           'role': 'user',
           'isAccept': false,
+          'bakiye': 0,
           'createdAt': FieldValue.serverTimestamp(),
         });
 
