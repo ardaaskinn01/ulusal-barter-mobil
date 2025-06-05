@@ -13,10 +13,11 @@ import 'kayit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await dotenv.load(fileName: ".env");
+
 
   // Supabase'i başlatgit init
   await Supabase.initialize(

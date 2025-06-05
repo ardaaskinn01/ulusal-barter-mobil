@@ -307,7 +307,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Padding(
                     padding: const EdgeInsets.only(left: 8, top: 8),
                     child: Text(
-                      'Barter Bakiyesi: ${userData?['bakiye'] ?? '0'}',
+                      'Barter Bakiyesi: ${userData?['bakiye'] ?? '0'} ₺',
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red),
                     ),
                   ),
