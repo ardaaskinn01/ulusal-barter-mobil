@@ -10,7 +10,7 @@ class Bakiye extends StatelessWidget {
     required BuildContext context,
     required String userId,
     required num mevcutBakiye,
-    required bool isAdding, // true: ekle, false: çıkar
+    required bool isAdding,
   }) {
     final TextEditingController controller = TextEditingController();
     final String title = isAdding ? 'Bakiye Ekle' : 'Bakiye Çıkar';
@@ -25,8 +25,10 @@ class Bakiye extends StatelessWidget {
             controller: controller,
             keyboardType: TextInputType.number,
             style: const TextStyle(color: Colors.white),
+            maxLength: 11, // Maksimum 11 hane
             decoration: InputDecoration(
-              hintText: isAdding ? 'Eklenecek bakiye' : 'Çıkarılacak bakiye',
+              counterStyle: const TextStyle(color: Colors.white60),
+              hintText: isAdding ? 'Eklenecek bakiye (4-11 hane)' : 'Çıkarılacak bakiye (4-11 hane)',
               hintStyle: const TextStyle(color: Colors.white60),
               focusedBorder: UnderlineInputBorder(
                 borderSide: BorderSide(color: goldColor),
@@ -48,29 +50,40 @@ class Bakiye extends StatelessWidget {
               ),
               onPressed: () async {
                 final String input = controller.text.trim();
-                final cleanedInput = input.replaceAll(RegExp(r'[.,]'), '');
-                final num? miktar = num.tryParse(cleanedInput);
+                final cleanedInput = input.replaceAll(RegExp(r'[^\d]'), ''); // sadece sayılar kalsın
 
-                if (miktar != null && miktar > 0) {
-                  num yeniBakiye = isAdding
-                      ? mevcutBakiye + miktar
-                      : (mevcutBakiye - miktar >= 0 ? mevcutBakiye - miktar : mevcutBakiye);
-
-                  if (!isAdding && mevcutBakiye - miktar < 0) {
-                    // Eğer çıkarma sonucu bakiye 0'ın altına inerse uyarı göster
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Bakiye sıfırın altına inemez!')),
-                    );
-                    return;
-                  }
-
-                  await FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(userId)
-                      .update({'bakiye': yeniBakiye});
-
-                  Navigator.pop(context);
+                if (cleanedInput.length < 4 || cleanedInput.length > 11) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Bakiye 4 ile 11 hane arasında olmalıdır')),
+                  );
+                  return;
                 }
+
+                final num? miktar = num.tryParse(cleanedInput);
+                if (miktar == null || miktar <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Geçerli bir miktar girin')),
+                  );
+                  return;
+                }
+
+                num yeniBakiye = isAdding
+                    ? mevcutBakiye + miktar
+                    : (mevcutBakiye - miktar >= 0 ? mevcutBakiye - miktar : mevcutBakiye);
+
+                if (!isAdding && mevcutBakiye - miktar < 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Bakiye sıfırın altına inemez!')),
+                  );
+                  return;
+                }
+
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(userId)
+                    .update({'bakiye': yeniBakiye});
+
+                Navigator.pop(context);
               },
               child: Text(isAdding ? 'Ekle' : 'Çıkar'),
             ),
