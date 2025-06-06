@@ -3,7 +3,6 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
@@ -41,8 +40,8 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static FirebaseOptions web = FirebaseOptions(
-    apiKey: dotenv.env['API_KEY_WEB']!,
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyB_ESfKhuxISul_AMzf1IJnDMzmH0tmy2M',
     appId: '1:862325738779:web:b11dc4bb6bfe54299cd7be',
     messagingSenderId: '862325738779',
     projectId: 'ulusal-barter',
@@ -51,8 +50,8 @@ class DefaultFirebaseOptions {
     measurementId: 'G-R19ETDCXBZ',
   );
 
-  static FirebaseOptions macos = FirebaseOptions(
-    apiKey: dotenv.env['API_KEY_MACOS']!,
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyArCdfjm6ZWz8zeYA4ramY2w60M1QtzlMc',
     appId: '1:862325738779:ios:6515a8e8f727949d9cd7be',
     messagingSenderId: '862325738779',
     projectId: 'ulusal-barter',
@@ -60,8 +59,8 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.example.ulusalbarter',
   );
 
-  static FirebaseOptions windows = FirebaseOptions(
-    apiKey: dotenv.env['API_KEY_WINDOWS']!,
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyB_ESfKhuxISul_AMzf1IJnDMzmH0tmy2M',
     appId: '1:862325738779:web:abbc31515129c57d9cd7be',
     messagingSenderId: '862325738779',
     projectId: 'ulusal-barter',
@@ -70,8 +69,8 @@ class DefaultFirebaseOptions {
     measurementId: 'G-WZ4Y6H0ER7',
   );
 
-  static FirebaseOptions ios = FirebaseOptions(
-    apiKey: dotenv.env['API_KEY_IOS']!,
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyArCdfjm6ZWz8zeYA4ramY2w60M1QtzlMc',
     appId: '1:862325738779:ios:6515a8e8f727949d9cd7be',
     messagingSenderId: '862325738779',
     projectId: 'ulusal-barter',
@@ -79,8 +78,8 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.example.ulusalbarter',
   );
 
-  static FirebaseOptions android = FirebaseOptions(
-    apiKey: dotenv.env['API_KEY_ANDROID']!,
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyDVdnZ79JiblpmZFfiVl_a1d2t-ficVX9w',
     appId: '1:862325738779:android:42c6edd577e72de49cd7be',
     messagingSenderId: '862325738779',
     projectId: 'ulusal-barter',
