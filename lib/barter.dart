@@ -11,6 +11,7 @@ class BarterPage extends StatefulWidget {
 class _BarterPageState extends State<BarterPage> {
   final ScrollController _scrollController = ScrollController();
 
+
   final List<String> slides = List.generate(12, (i) => 'assets/images/${i + 1}.png');
 
   void scrollTo(String direction) {

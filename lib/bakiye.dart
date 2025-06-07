@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class Bakiye extends StatelessWidget {
   const Bakiye({Key? key}) : super(key: key);
@@ -15,6 +17,22 @@ class Bakiye extends StatelessWidget {
     final TextEditingController controller = TextEditingController();
     final String title = isAdding ? 'Bakiye Ekle' : 'Bakiye Çıkar';
 
+    controller.addListener(() {
+      String digitsOnly = controller.text.replaceAll(RegExp(r'[^\d]'), '');
+      if (digitsOnly.isEmpty) return;
+
+      final number = int.tryParse(digitsOnly);
+      if (number == null) return;
+
+      final formatted = NumberFormat.decimalPattern('tr_TR').format(number);
+
+      controller.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length),
+      );
+    });
+
+
     showDialog(
       context: context,
       builder: (context) {
@@ -24,11 +42,12 @@ class Bakiye extends StatelessWidget {
           content: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             style: const TextStyle(color: Colors.white),
-            maxLength: 11, // Maksimum 11 hane
+            maxLength: 12, // 4 sayı + 1 nokta + en fazla 6 sayı
             decoration: InputDecoration(
               counterStyle: const TextStyle(color: Colors.white60),
-              hintText: isAdding ? 'Eklenecek bakiye (4-11 hane)' : 'Çıkarılacak bakiye (4-11 hane)',
+              hintText: isAdding ? 'Eklenecek bakiye' : 'Çıkarılacak bakiye',
               hintStyle: const TextStyle(color: Colors.white60),
               focusedBorder: UnderlineInputBorder(
                 borderSide: BorderSide(color: goldColor),
@@ -49,17 +68,9 @@ class Bakiye extends StatelessWidget {
                 foregroundColor: Colors.black,
               ),
               onPressed: () async {
-                final String input = controller.text.trim();
-                final cleanedInput = input.replaceAll(RegExp(r'[^\d]'), ''); // sadece sayılar kalsın
+                final String input = controller.text.trim().replaceAll('.', ''); // Noktaları kaldır
 
-                if (cleanedInput.length < 4 || cleanedInput.length > 11) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Bakiye 4 ile 11 hane arasında olmalıdır')),
-                  );
-                  return;
-                }
-
-                final num? miktar = num.tryParse(cleanedInput);
+                final num? miktar = num.tryParse(input);
                 if (miktar == null || miktar <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Geçerli bir miktar girin')),
@@ -85,6 +96,7 @@ class Bakiye extends StatelessWidget {
 
                 Navigator.pop(context);
               },
+
               child: Text(isAdding ? 'Ekle' : 'Çıkar'),
             ),
           ],
@@ -156,7 +168,6 @@ class Bakiye extends StatelessWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Ekle Butonu
                       ElevatedButton(
                         onPressed: () =>
                             _showBakiyeDialog(context: context, userId: userId, mevcutBakiye: bakiye, isAdding: true),
@@ -170,7 +181,6 @@ class Bakiye extends StatelessWidget {
                         child: const Text('Ekle'),
                       ),
                       const SizedBox(width: 8),
-                      // Çıkar Butonu
                       ElevatedButton(
                         onPressed: () =>
                             _showBakiyeDialog(context: context, userId: userId, mevcutBakiye: bakiye, isAdding: false),

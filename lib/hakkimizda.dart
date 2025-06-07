@@ -259,18 +259,13 @@ class HakkimizdaPage extends StatelessWidget {
 
                               const SizedBox(height: 16),
 
-                              // Yönetim Kurulu Üyeleri (3 sütun görünümü için Wrap)
                               Wrap(
                                 spacing: 24,
                                 runSpacing: 16,
                                 alignment: WrapAlignment.center,
                                 children: [
-                                  yonetimKuruluUyeCard("Prof. Dr. Rıdvan KANAT", "Yönetim Kurulu Üyesi"),
-                                  yonetimKuruluUyeCard("Dr. Arif TAŞ", "Yönetim Kurulu Üyesi"),
-                                  yonetimKuruluUyeCard("Burhanettin ŞAFAK", "Yönetim Kurulu Üyesi"),
-                                  yonetimKuruluUyeCard("Sedat KILIÇ", "Yönetim Kurulu Üyesi"),
-                                  yonetimKuruluUyeCard("Sedat ŞAHİN", "Yönetim Kurulu Üyesi"),
-                                  yonetimKuruluUyeCard("İsmet SARIKAYA", "Yönetim Kurulu Üyesi"),
+                                  yonetimKuruluUyeCard("Hasan ULAŞZADE", "Yönetim Kurulu Başkan Vekili"),
+                                  yonetimKuruluUyeCard("Selim ANIŞ", "Yönetim Kurulu Üyesi")
                                 ],
                               ),
 
