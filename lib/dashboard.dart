@@ -1,11 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+import 'package:ulusalbarter/teklifler.dart';
 import 'package:ulusalbarter/urunekle.dart';
 import 'package:ulusalbarter/urunprofil.dart';
 
 import 'appDrawer.dart';
 import 'bakiye.dart';
+import 'bakiyegecmisi.dart';
 import 'main.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -18,19 +21,44 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final formatCurrency = NumberFormat.decimalPattern('tr_TR');
 
   bool loading = true;
   final TextEditingController _locationController = TextEditingController();
 
-// Arama yapılan konumu tutar
+  // Arama yapılan konumu tutar
   String searchLocation = '';
 
-// Tüm ürün türlerinin listesi (örnek değerlerle)
-  List<String> productTypes = ["Arsa", "Arazi", "Otel", "Hizmet", "Çiftlik", "Daire", "Villa", "Santral",
-    "Restaurant", "Bahçe", "Tarla", "Parsel", "Tesis", "Zeytinlik", "Fabrika",
-    "Beyaz Eşya", "Ofis", "Ev", "Malikane", "Tatil Köyü", "Taksi", "Tekstil", "Peyzaj", "Sera", "Estetik"];
+  // Tüm ürün türlerinin listesi (örnek değerlerle)
+  List<String> productTypes = [
+    "Arsa",
+    "Arazi",
+    "Otel",
+    "Hizmet",
+    "Çiftlik",
+    "Daire",
+    "Villa",
+    "Santral",
+    "Restaurant",
+    "Bahçe",
+    "Tarla",
+    "Parsel",
+    "Tesis",
+    "Zeytinlik",
+    "Fabrika",
+    "Beyaz Eşya",
+    "Ofis",
+    "Ev",
+    "Malikane",
+    "Tatil Köyü",
+    "Taksi",
+    "Tekstil",
+    "Peyzaj",
+    "Sera",
+    "Estetik",
+  ];
 
-// Seçili ürün türleri
+  // Seçili ürün türleri
   Set<String> selectedTypes = {};
   bool showFilterMobile = false;
   Map<String, dynamic>? userData;
@@ -40,23 +68,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void applyFilters() {
     setState(() {
-      filteredProducts = products.where((product) {
-        final productName = (product['isim'] ?? '').toString().toLowerCase();
-        final location = searchLocation.toLowerCase();
+      filteredProducts =
+          products.where((product) {
+            final productName =
+                (product['isim'] ?? '').toString().toLowerCase();
+            final location = searchLocation.toLowerCase();
 
-        // Konum: ya konum alanında eşleşecek ya da ürün ismi konum içerecek
-        final locationMatch = searchLocation.isEmpty ||
-            (product['konum'] != null &&
-                product['konum'].toString().toLowerCase().contains(location)) ||
-            productName.contains(location);
+            // Konum: ya konum alanında eşleşecek ya da ürün ismi konum içerecek
+            final locationMatch =
+                searchLocation.isEmpty ||
+                (product['konum'] != null &&
+                    product['konum'].toString().toLowerCase().contains(
+                      location,
+                    )) ||
+                productName.contains(location);
 
-        // Tür: ya seçili türlerden biriyle eşleşecek ya da isimde geçecek
-        final typeMatch = selectedTypes.isEmpty ||
-            (product['tur'] != null && selectedTypes.contains(product['tur'])) ||
-            selectedTypes.any((type) => productName.contains(type.toLowerCase()));
+            // Tür: ya seçili türlerden biriyle eşleşecek ya da isimde geçecek
+            final typeMatch =
+                selectedTypes.isEmpty ||
+                (product['tur'] != null &&
+                    selectedTypes.contains(product['tur'])) ||
+                selectedTypes.any(
+                  (type) => productName.contains(type.toLowerCase()),
+                );
 
-        return locationMatch && typeMatch;
-      }).toList();
+            return locationMatch && typeMatch;
+          }).toList();
     });
   }
 
@@ -86,21 +123,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> fetchProducts() async {
-    final snapshot = await _firestore
-        .collection('products')
-        .orderBy('createdAt', descending: true)
-        .get();
+    final snapshot =
+        await _firestore
+            .collection('products')
+            .orderBy('createdAt', descending: true)
+            .get();
 
-    products = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+    products =
+        snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
     applyFilters(); // filtreli listeyi de güncelle
   }
 
   Future<void> fetchPendingRequests() async {
     final snapshot = await _firestore.collection('users').get();
-    pendingRequests = snapshot.docs
-        .where((doc) => doc.data().containsKey('isAccept') && doc['isAccept'] == false)
-        .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
-        .toList();
+    pendingRequests =
+        snapshot.docs
+            .where(
+              (doc) =>
+                  doc.data().containsKey('isAccept') &&
+                  doc['isAccept'] == false,
+            )
+            .map((doc) => {'id': doc.id, ...doc.data() as Map<String, dynamic>})
+            .toList();
   }
 
   Future<void> approveUser(String userId) async {
@@ -124,18 +168,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             hintText: "Şehir, ilçe...",
             filled: true,
             fillColor: Colors.grey[100],
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
             border: OutlineInputBorder(
               borderSide: const BorderSide(color: Colors.grey),
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-            onChanged: (value) {
-              setState(() {
-                searchLocation = value;
-              });
-              applyFilters();
-            }
+          onChanged: (value) {
+            setState(() {
+              searchLocation = value;
+            });
+            applyFilters();
+          },
         ),
         const SizedBox(height: 16),
         const Text(
@@ -144,23 +191,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         const SizedBox(height: 8),
         Column(
-          children: productTypes.map((type) {
-            return CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(type),
-              value: selectedTypes.contains(type),
-                onChanged: (value) {
-                  setState(() {
-                    if (value == true) {
-                      selectedTypes.add(type);
-                    } else {
-                      selectedTypes.remove(type);
-                    }
-                  });
-                  applyFilters();
-                }
-            );
-          }).toList(),
+          children:
+              productTypes.map((type) {
+                return CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(type),
+                  value: selectedTypes.contains(type),
+                  onChanged: (value) {
+                    setState(() {
+                      if (value == true) {
+                        selectedTypes.add(type);
+                      } else {
+                        selectedTypes.remove(type);
+                      }
+                    });
+                    applyFilters();
+                  },
+                );
+              }).toList(),
         ),
       ],
     );
@@ -170,333 +218,438 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return loading
         ? Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              'assets/images/newbg02.png',
-              width: 150, // istediğin boyut
-              height: 150,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'İçerik Yükleniyor...',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      ),
-    )
-        : Scaffold(
-      backgroundColor: const Color(0xFFFFF9C4),
-      drawer: AppDrawer(parentContext: context),
-
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(120),
-        child: AppBar(
-          backgroundColor: Colors.yellow[700],
-          elevation: 0,
-          automaticallyImplyLeading: false, // Manuel menü düğmesi kullanıyoruz
-          leading: Builder(
-            builder: (context) => IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () {
-                Scaffold.of(context).openDrawer();
-              },
-              tooltip: 'Menüyü Aç',
-            ),
-          ),
-          flexibleSpace: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 48, 16, 0),
+          body: Center(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.only(left: 48),
-                  child: Text(
-                    'Hoşgeldiniz, ${userData?['ad'] ?? ''} ${userData?['soyad'] ?? ''}',
-                    style: const TextStyle(fontSize: 18),
-                  ),
+                Image.asset(
+                  'assets/images/newbg02.png',
+                  width: 150, // istediğin boyut
+                  height: 150,
+                  fit: BoxFit.contain,
                 ),
-                const SizedBox(height: 4),
-                Padding(
-                  padding: const EdgeInsets.only(left: 48),
-                  child: Text(
-                    '${products.length} ürün listeleniyor',
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
-                  ),
+                const SizedBox(height: 16),
+                const Text(
+                  'İçerik Yükleniyor...',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-
-                const SizedBox(height: 8),
-
-                if (userData?['role'] == 'admin')
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            backgroundColor: Colors.red[900], // kırmızı 900
-                            foregroundColor: Colors.white, // beyaz yazı
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const Bakiye()),
-                            );
-                          },
-                          child: const Text('Bakiye Takip'),
-                        ),
-                        const SizedBox(width: 8),
-                        _buildRedButton(
-                          label: 'Ürün Ekle',
-                          color: Colors.red[700]!,
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => UrunEkleScreen()),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        _buildRedButton(
-                          label: 'İstekler',
-                          color: Colors.red[500]!,
-                          trailing: pendingRequests.isNotEmpty
-                              ? CircleAvatar(
-                            radius: 8,
-                            backgroundColor: Colors.white,
-                            child: Text(
-                              '${pendingRequests.length}',
-                              style: const TextStyle(fontSize: 10, color: Colors.red),
-                            ),
-                          )
-                              : null,
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.white,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                              ),
-                              builder: (_) => buildPendingRequestSheet(),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        _buildRedButton(
-                          label: 'Filtre',
-                          color: Colors.red[300]!,
-                          onPressed: () {
-                            setState(() {
-                              showFilterMobile = true;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8, top: 8),
-                    child: Text(
-                      'Barter Bakiyesi: ${userData?['bakiye'] ?? '0'} ₺',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red),
-                    ),
-                  ),
               ],
             ),
           ),
+        )
+        : Scaffold(
+          backgroundColor: const Color(0xFFFFF9C4),
+          drawer: AppDrawer(parentContext: context),
 
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Çıkış Yap',
-              onPressed: () async {
-                await auth.FirebaseAuth.instance.signOut();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-      body: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: products.isEmpty
-                ? const Center(child: Text("Hiç ürün bulunamadı."))
-                : GridView.builder(
-              itemCount: filteredProducts.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.7,
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(120),
+            child: AppBar(
+              backgroundColor: Colors.yellow[700],
+              elevation: 0,
+              automaticallyImplyLeading:
+                  false, // Manuel menü düğmesi kullanıyoruz
+              leading: Builder(
+                builder:
+                    (context) => IconButton(
+                      icon: const Icon(Icons.menu),
+                      onPressed: () {
+                        Scaffold.of(context).openDrawer();
+                      },
+                      tooltip: 'Menüyü Aç',
+                    ),
               ),
-              itemBuilder: (_, index) {
-                final product = filteredProducts[index];
-                return Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => UrunProfil(id: product['isim']),
+              flexibleSpace: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 48, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 48),
+                      child: Text(
+                        'Hoşgeldiniz, ${userData?['ad'] ?? ''} ${userData?['soyad'] ?? ''}',
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 48),
+                      child: Text(
+                        '${products.length} ürün listeleniyor',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
                         ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                          child: AspectRatio(
-                            aspectRatio: 1,
-                            child: Container(
-                              color: Colors.grey[200],
-                              child: product['anaGorselUrl'] != null
-                                  ? Image.network(
-                                product['anaGorselUrl'],
-                                fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    if (userData?['role'] == 'admin')
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildCompactButton(
+                              label: 'Bakiye Takip',
+                              color: Colors.red[900]!,
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const Bakiye()),
+                                );
+                              },
+                            ),
+                            SizedBox(width: 8),
+                            _buildCompactButton(
+                              label: 'Ürün Ekle',
+                              color: Colors.red[700]!,
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => UrunEkleScreen()),
+                                );
+                              },
+                            ),
+                            SizedBox(width: 8),
+                            _buildCompactButton(
+                              label: 'İstekler',
+                              color: Colors.red[500]!,
+                              trailing: pendingRequests.isNotEmpty
+                                  ? CircleAvatar(
+                                radius: 10,
+                                backgroundColor: Colors.white,
+                                child: Text(
+                                  '${pendingRequests.length}',
+                                  style: const TextStyle(fontSize: 12, color: Colors.red),
+                                ),
                               )
-                                  : const Icon(
-                                Icons.image_not_supported,
-                                size: 50,
-                                color: Colors.grey,
+                                  : null,
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.white,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                                  ),
+                                  builder: (_) => buildPendingRequestSheet(),
+                                );
+                              },
+                            ),
+                            SizedBox(width: 8),
+                            _buildCompactButton(
+                              label: 'Teklifler',
+                              color: Colors.red[400]!,
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => OffersPage()),
+                                );
+                              },
+                            ),
+                            SizedBox(width: 8),
+                            _buildCompactButton(
+                              label: 'Filtre',
+                              color: Colors.red[200]!,
+                              onPressed: () {
+                                setState(() {
+                                  showFilterMobile = true;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+
+                      )
+                    else
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 8, top: 8),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Barter Bakiyesi: ${NumberFormat.decimalPattern('tr_TR').format(userData?['bakiye'] ?? 0)} ₺',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red,
+                                    fontSize: 16, // başlangıç fontu, otomatik küçülecek
+                                  ),
+                                  maxLines: 1,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  product['isim'] ?? 'Ürün İsimsiz',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                          const SizedBox(width: 8),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                minimumSize: const Size(
+                                  72,
+                                  42,
+                                ), // Buton minimum boyutu
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                ), // Daha dar padding
+                                visualDensity:
+                                    VisualDensity
+                                        .compact, // Daha kompakt görünsün
+                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => BakiyeGecmisiScreen(
+                                          userId: userData?['uid'],
+                                        ),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.history, size: 21),
+                              label: const Text(
+                                'Hesap Geçmişi',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                ), // Label yazı boyutunu küçült
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  tooltip: 'Çıkış Yap',
+                  onPressed: () async {
+                    await auth.FirebaseAuth.instance.signOut();
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LoginScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          body: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child:
+                    products.isEmpty
+                        ? const Center(child: Text("Hiç ürün bulunamadı."))
+                        : GridView.builder(
+                          itemCount: filteredProducts.length,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                childAspectRatio: 0.7,
+                              ),
+                          itemBuilder: (_, index) {
+                            final product = filteredProducts[index];
+                            return Card(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 4,
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              UrunProfil(id: product['isim']),
+                                    ),
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      product['fiyat'] != null
-                                          ? (RegExp(r'\d\s*(₺|\$|€)$')
-                                          .hasMatch(product['fiyat'].toString().trim())
-                                          ? product['fiyat']
-                                          : '${product['fiyat']} ₺')
-                                          : '',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.redAccent,
+                                    ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(12),
+                                      ),
+                                      child: AspectRatio(
+                                        aspectRatio: 1,
+                                        child: Container(
+                                          color: Colors.grey[200],
+                                          child:
+                                              product['anaGorselUrl'] != null
+                                                  ? Image.network(
+                                                    product['anaGorselUrl'],
+                                                    fit: BoxFit.contain,
+                                                  )
+                                                  : const Icon(
+                                                    Icons.image_not_supported,
+                                                    size: 50,
+                                                    color: Colors.grey,
+                                                  ),
+                                        ),
                                       ),
                                     ),
-                                    GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => UrunProfil(id: product['id']),
-                                          ),
-                                        );
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: Colors.deepPurple.shade100,
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        child: const Text(
-                                          'Detay',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.deepPurple,
-                                          ),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(8),
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              product['isim'] ?? 'Ürün İsimsiz',
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.black87,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Text(
+                                                  product['fiyat'] != null
+                                                      ? (RegExp(
+                                                            r'\d\s*(₺|\$|€)$',
+                                                          ).hasMatch(
+                                                            product['fiyat']
+                                                                .toString()
+                                                                .trim(),
+                                                          )
+                                                          ? product['fiyat']
+                                                          : '${product['fiyat']} ₺')
+                                                      : '',
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.redAccent,
+                                                  ),
+                                                ),
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder:
+                                                            (
+                                                              context,
+                                                            ) => UrunProfil(
+                                                              id: product['id'],
+                                                            ),
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 3,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          Colors
+                                                              .deepPurple
+                                                              .shade100,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            20,
+                                                          ),
+                                                    ),
+                                                    child: const Text(
+                                                      'Detay',
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        color:
+                                                            Colors.deepPurple,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            );
+                          },
+                        ),
+              ),
+              if (showFilterMobile)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    color: Colors.black.withOpacity(
+                      0.5,
+                    ), // Arka planın opaklığı
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        width: 300, // panel genişliği
+                        color: Colors.white,
+                        padding: const EdgeInsets.all(16),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size.fromHeight(40),
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    showFilterMobile = false;
+                                  });
+                                },
+                                child: const Text("Kapat"),
+                              ),
+                              const SizedBox(height: 16),
+                              buildFilterPanel(), // JS’deki FilterPanel bileşeni gibi
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          if (showFilterMobile)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                color: Colors.black.withOpacity(0.5), // Arka planın opaklığı
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    width: 300, // panel genişliği
-                    color: Colors.white,
-                    padding: const EdgeInsets.all(16),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size.fromHeight(40),
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                showFilterMobile = false;
-                              });
-                            },
-                            child: const Text("Kapat"),
-                          ),
-                          const SizedBox(height: 16),
-                          buildFilterPanel(), // JS’deki FilterPanel bileşeni gibi
-                        ],
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
-        ],
-      ),
-    );
+            ],
+          ),
+        );
   }
 
   Widget buildPendingRequestSheet() {
@@ -504,46 +657,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
       expand: false,
       initialChildSize: 0.6,
       maxChildSize: 0.9,
-      builder: (_, controller) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const Text(
-              'Onay Bekleyen Kullanıcılar',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      builder:
+          (_, controller) => Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const Text(
+                  'Onay Bekleyen Kullanıcılar',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child:
+                      pendingRequests.isEmpty
+                          ? const Center(
+                            child: Text("Onay bekleyen kullanıcı yok."),
+                          )
+                          : ListView.builder(
+                            controller: controller,
+                            itemCount: pendingRequests.length,
+                            itemBuilder: (_, index) {
+                              final user = pendingRequests[index];
+                              return Card(
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                margin: const EdgeInsets.only(bottom: 12),
+                                child: ListTile(
+                                  leading: const CircleAvatar(
+                                    child: Icon(Icons.person),
+                                  ),
+                                  title: Text('${user['ad']} ${user['soyad']}'),
+                                  subtitle: Text(user['adres'] ?? 'Adres yok'),
+                                  trailing: IconButton(
+                                    icon: const Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green,
+                                    ),
+                                    tooltip: "Onayla",
+                                    onPressed: () async {
+                                      await approveUser(user['id']);
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: pendingRequests.isEmpty
-                  ? const Center(child: Text("Onay bekleyen kullanıcı yok."))
-                  : ListView.builder(
-                controller: controller,
-                itemCount: pendingRequests.length,
-                itemBuilder: (_, index) {
-                  final user = pendingRequests[index];
-                  return Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: const CircleAvatar(child: Icon(Icons.person)),
-                      title: Text('${user['ad']} ${user['soyad']}'),
-                      subtitle: Text(user['adres'] ?? 'Adres yok'),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.check_circle, color: Colors.green),
-                        tooltip: "Onayla",
-                        onPressed: () async {
-                          await approveUser(user['id']);
-                        },
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 }
@@ -558,20 +722,42 @@ Widget _buildRedButton({
     onPressed: onPressed,
     style: ElevatedButton.styleFrom(
       backgroundColor: color,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white),
-        ),
+        Text(label, style: const TextStyle(color: Colors.white)),
+        if (trailing != null) ...[const SizedBox(width: 6), trailing],
+      ],
+    ),
+  );
+}
+
+Widget _buildCompactButton({
+  required String label,
+  required Color color,
+  required VoidCallback onPressed,
+  Widget? trailing,
+}) {
+  return ElevatedButton(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: color,
+      foregroundColor: Colors.white,
+      padding: EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      minimumSize: Size(0, 48), // Yükseklik biraz arttı, rahat olsun diye
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
+    ),
+    onPressed: onPressed,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: TextStyle(fontSize: 14)),
         if (trailing != null) ...[
-          const SizedBox(width: 6),
+          SizedBox(height: 4),
           trailing,
         ],
       ],

@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
+import 'bakiyegecmisi.dart';
+
 class Bakiye extends StatelessWidget {
   const Bakiye({Key? key}) : super(key: key);
 
@@ -14,48 +16,43 @@ class Bakiye extends StatelessWidget {
     required num mevcutBakiye,
     required bool isAdding,
   }) {
-    final TextEditingController controller = TextEditingController();
+    final TextEditingController amountController = TextEditingController();
+    final TextEditingController descriptionController = TextEditingController();
     final String title = isAdding ? 'Bakiye Ekle' : 'Bakiye Çıkar';
-
-    controller.addListener(() {
-      String digitsOnly = controller.text.replaceAll(RegExp(r'[^\d]'), '');
-      if (digitsOnly.isEmpty) return;
-
-      final number = int.tryParse(digitsOnly);
-      if (number == null) return;
-
-      final formatted = NumberFormat.decimalPattern('tr_TR').format(number);
-
-      controller.value = TextEditingValue(
-        text: formatted,
-        selection: TextSelection.collapsed(offset: formatted.length),
-      );
-    });
-
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           backgroundColor: Colors.black87,
-          title: Text(title, style: TextStyle(color: goldColor)),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: const TextStyle(color: Colors.white),
-            maxLength: 12, // 4 sayı + 1 nokta + en fazla 6 sayı
-            decoration: InputDecoration(
-              counterStyle: const TextStyle(color: Colors.white60),
-              hintText: isAdding ? 'Eklenecek bakiye' : 'Çıkarılacak bakiye',
-              hintStyle: const TextStyle(color: Colors.white60),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: goldColor),
+          title: Text(title, style: const TextStyle(color: goldColor)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  _ThousandsSeparatorFormatter(), // Noktalı biçimlendirme
+                ],
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'Miktar',
+                  hintStyle: TextStyle(color: Colors.white60),
+                ),
               ),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white38),
+              const SizedBox(height: 12),
+              TextField(
+                controller: descriptionController,
+                maxLines: 2,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'Açıklama',
+                  hintStyle: TextStyle(color: Colors.white60),
+                ),
               ),
-            ),
+            ],
           ),
           actions: [
             TextButton(
@@ -68,12 +65,14 @@ class Bakiye extends StatelessWidget {
                 foregroundColor: Colors.black,
               ),
               onPressed: () async {
-                final String input = controller.text.trim().replaceAll('.', ''); // Noktaları kaldır
-
+                // Noktaları kaldırarak sayıya çevir
+                final input = amountController.text.trim().replaceAll('.', '');
                 final num? miktar = num.tryParse(input);
-                if (miktar == null || miktar <= 0) {
+                final aciklama = descriptionController.text.trim();
+
+                if (miktar == null || miktar <= 0 || aciklama.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Geçerli bir miktar girin')),
+                    const SnackBar(content: Text('Geçerli bir miktar ve açıklama girin')),
                   );
                   return;
                 }
@@ -89,14 +88,20 @@ class Bakiye extends StatelessWidget {
                   return;
                 }
 
-                await FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(userId)
-                    .update({'bakiye': yeniBakiye});
+                final now = DateTime.now();
+                final firestore = FirebaseFirestore.instance;
+
+                await firestore.collection('users').doc(userId).update({'bakiye': yeniBakiye});
+
+                await firestore.collection('users').doc(userId).collection('bakiye_gecmisi').add({
+                  'miktar': miktar,
+                  'aciklama': aciklama,
+                  'islemTuru': isAdding ? 'ekle' : 'çıkar',
+                  'tarih': now,
+                });
 
                 Navigator.pop(context);
               },
-
               child: Text(isAdding ? 'Ekle' : 'Çıkar'),
             ),
           ],
@@ -104,6 +109,7 @@ class Bakiye extends StatelessWidget {
       },
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -153,45 +159,68 @@ class Bakiye extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(color: goldColor, width: 1),
                 ),
-                child: ListTile(
-                  title: Text(
-                    '$ad $soyad',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'Bakiye: ₺${bakiye.toStringAsFixed(2)}',
-                    style: const TextStyle(color: goldColor),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ElevatedButton(
-                        onPressed: () =>
-                            _showBakiyeDialog(context: context, userId: userId, mevcutBakiye: bakiye, isAdding: true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: goldColor,
-                          foregroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                      Text(
+                        '$ad $soyad',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
-                        child: const Text('Ekle'),
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () =>
-                            _showBakiyeDialog(context: context, userId: userId, mevcutBakiye: bakiye, isAdding: false),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade700,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Bakiye: ₺${bakiye.toStringAsFixed(2)}',
+                        style: const TextStyle(color: goldColor),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => _showBakiyeDialog(
+                                context: context,
+                                userId: userId,
+                                mevcutBakiye: bakiye,
+                                isAdding: true),
+                            child: const Text('Ekle'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: goldColor,
+                              foregroundColor: Colors.black,
+                            ),
                           ),
-                        ),
-                        child: const Text('Çıkar'),
+                          ElevatedButton(
+                            onPressed: () => _showBakiyeDialog(
+                                context: context,
+                                userId: userId,
+                                mevcutBakiye: bakiye,
+                                isAdding: false),
+                            child: const Text('Çıkar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red.shade700,
+                              foregroundColor: Colors.black,
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => BakiyeGecmisiScreen(userId: userId)),
+                              );
+                            },
+                            child: const Text('Geçmiş'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueAccent,
+                              foregroundColor: Colors.black,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -204,3 +233,39 @@ class Bakiye extends StatelessWidget {
     );
   }
 }
+
+class _ThousandsSeparatorFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final rawText = newValue.text.replaceAll('.', '');
+    if (rawText.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // Sayı formatlama
+    final number = int.parse(rawText);
+    final formatted = _formatWithDots(number);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  String _formatWithDots(int value) {
+    final str = value.toString();
+    final buffer = StringBuffer();
+    int count = 0;
+
+    for (int i = str.length - 1; i >= 0; i--) {
+      buffer.write(str[i]);
+      count++;
+      if (count % 3 == 0 && i != 0) {
+        buffer.write('.');
+      }
+    }
+
+    return buffer.toString().split('').reversed.join();
+  }
+}
+

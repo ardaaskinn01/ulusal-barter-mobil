@@ -16,16 +16,243 @@ class UrunProfil extends StatefulWidget {
 class _UrunProfilState extends State<UrunProfil> {
   DocumentSnapshot<Map<String, dynamic>>? product;
   User? currentUser;
-  bool isAdmin = false;
+  bool isAdmin = false; // senin mevcut admin kontrolün
   bool canEdit = false;
+  bool hasOffer = false; // kullanıcının teklif verip vermediği
+  String? offerId;       // var olan teklifin id'si
+  String userName = 'Ad Soyad'; // kullanıcı adı, veritabanından çekilmeli
   int? currentIndex;
   VideoPlayerController? _videoController;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
     super.initState();
     fetchUser();
     fetchProduct();
+  }
+
+  void checkUserOffer() async {
+    final productId = product!.data()?['isim'];
+    final userId = currentUser?.uid; // oturum açan kullanıcı id'si
+
+    if (productId != null) {
+      final offerQuery = await _firestore
+          .collection('offers')
+          .where('productId', isEqualTo: productId)
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
+
+      if (offerQuery.docs.isNotEmpty) {
+        setState(() {
+          hasOffer = true;
+          offerId = offerQuery.docs.first.id;
+        });
+      } else {
+        setState(() {
+          hasOffer = false;
+          offerId = null;
+        });
+      }
+    }
+  }
+
+  Future<void> showOfferDialog() async {
+    final productId = product!.data()?['isim'];
+    final userId = currentUser?.uid; // gerçek kullanıcı id
+    final TextEditingController amountController = TextEditingController();
+
+    String selectedCurrency = '₺';
+    final List<String> currencies = ['₺', '\$', '€'];
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Teklif Ver',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            textAlign: TextAlign.center,
+          ),
+          content: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Miktar',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.yellow.shade700, width: 2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                    onChanged: (value) {
+                      // Sadece rakamları al (nokta hariç, onu biz ekleyeceğiz)
+                      String digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+
+                      // Eğer boşsa direk controller'a yazıp çık
+                      if (digitsOnly.isEmpty) {
+                        amountController.text = '';
+                        amountController.selection = TextSelection.collapsed(offset: 0);
+                        return;
+                      }
+
+                      // Ters çevir (sağdan sola gruplamak için)
+                      String reversed = digitsOnly.split('').reversed.join('');
+
+                      // Üçlü gruplar yap
+                      List<String> chunks = [];
+                      for (int i = 0; i < reversed.length; i += 3) {
+                        int end = (i + 3 > reversed.length) ? reversed.length : i + 3;
+                        chunks.add(reversed.substring(i, end));
+                      }
+
+                      // Noktaları koy ve tekrar ters çevir
+                      String formatted = chunks.join('.').split('').reversed.join('');
+
+                      // Güncellemeden önce cursor pozisyonunu ayarla
+                      final oldSelection = amountController.selection;
+                      amountController.text = formatted;
+                      int newOffset = formatted.length - (value.length - oldSelection.baseOffset);
+                      if (newOffset < 0) newOffset = 0;
+                      if (newOffset > formatted.length) newOffset = formatted.length;
+
+                      amountController.selection = TextSelection.collapsed(offset: newOffset);
+                    },
+
+                  ),
+                  SizedBox(height: 20),
+
+                  // Birim seçimi kutusu
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.yellow.shade700, width: 2),
+                      color: Colors.yellow.shade50,
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedCurrency,
+                        icon: Icon(Icons.arrow_drop_down, color: Colors.yellow.shade700),
+                        dropdownColor: Colors.yellow.shade50,
+                        style: TextStyle(color: Colors.black87, fontSize: 16),
+                        items: currencies
+                            .map((cur) => DropdownMenuItem(
+                          value: cur,
+                          child: Row(
+                            children: [
+                              Icon(
+                                cur == '₺'
+                                    ? Icons.currency_lira
+                                    : cur == '\$'
+                                    ? Icons.attach_money
+                                    : Icons.euro,
+                                color: Colors.yellow.shade700,
+                              ),
+                              SizedBox(width: 8),
+                              Text(cur),
+                            ],
+                          ),
+                        ))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              selectedCurrency = value;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          actionsPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          actionsAlignment: MainAxisAlignment.spaceBetween,
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red.shade600,
+                textStyle: TextStyle(fontSize: 16),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('İptal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.yellow.shade700,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () async {
+                // Noktaları kaldır, sadece rakamları al
+                String rawAmount = amountController.text.replaceAll('.', '');
+
+                final amount = double.tryParse(rawAmount);
+                if (amount == null || amount <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Geçerli bir miktar girin'))
+                  );
+                  return;
+                }
+
+                if (productId == null || userId!.isEmpty) return;
+
+                // Firestore'a teklif ekle
+                await _firestore.collection('offers').add({
+                  'productId': productId,
+                  'userId': userId,
+                  'userName': userName,
+                  'amount': amount,
+                  'currency': selectedCurrency,
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+
+                setState(() {
+                  hasOffer = true;
+                });
+
+                Navigator.of(context).pop();
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Teklif başarıyla gönderildi'))
+                );
+              },
+
+              child: Text('Teklif Ver', style: TextStyle(color: Colors.black),),
+            ),
+          ],
+        );
+
+      },
+    );
+  }
+
+  Future<void> withdrawOffer() async {
+    if (offerId == null) return;
+
+    await _firestore.collection('offers').doc(offerId).delete();
+
+    setState(() {
+      hasOffer = false;
+      offerId = null;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Teklif geri çekildi')));
   }
 
   Future<void> fetchUser() async {
@@ -40,6 +267,7 @@ class _UrunProfilState extends State<UrunProfil> {
         if (userSnap.exists && userSnap.data()?['role'] == 'admin') {
           setState(() => isAdmin = true);
         }
+        userName = userSnap.data()?['ad'] + ' ' + userSnap.data()?['soyad'];
       }
     });
   }
@@ -57,6 +285,7 @@ class _UrunProfilState extends State<UrunProfil> {
         canEdit = currentUser?.uid == doc.data()?['userId'];
       });
     }
+    checkUserOffer(); // Ürün yüklendikten sonra çağır
   }
 
   void openModal(int index) {
@@ -132,6 +361,7 @@ class _UrunProfilState extends State<UrunProfil> {
     final data = product!.data()!;
     final aciklamalar = List<String>.from(data['aciklamalar'] ?? []);
     final ekGorseller = List<String>.from(data['ekGorselUrl'] ?? []);
+    final fiyat = data['fiyat'];
 
     return Scaffold(
       backgroundColor: Colors.yellow.shade600,
@@ -204,7 +434,7 @@ class _UrunProfilState extends State<UrunProfil> {
 
                 SizedBox(height: 24),
 
-                if (data['fiyat'] != null)
+                if (fiyat != null)
                   (isAdmin || canEdit)
                       ? Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -219,9 +449,9 @@ class _UrunProfilState extends State<UrunProfil> {
                           alignment: Alignment.center,
                           child: Text(
                             RegExp(r'\d\s*(₺|\$|€)$')
-                                .hasMatch(data['fiyat'].toString().trim())
-                                ? data['fiyat'].toString().trim()
-                                : '${data['fiyat']} ₺',
+                                .hasMatch(fiyat.toString().trim())
+                                ? fiyat.toString().trim()
+                                : '$fiyat ₺',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -234,18 +464,20 @@ class _UrunProfilState extends State<UrunProfil> {
                       SizedBox(width: 12),
                       ElevatedButton(
                         onPressed: () {
-                          final productData = product!.data(); // burada veriyi alıyoruz
+                          final productData = product!.data();
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => UrunEkleScreen(existingProduct: productData),
+                              builder: (context) =>
+                                  UrunEkleScreen(existingProduct: productData),
                             ),
                           );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red.shade700,
                         ),
-                        child: Text("Düzenle", style: TextStyle(color: Colors.white)),
+                        child:
+                        Text("Düzenle", style: TextStyle(color: Colors.white)),
                       ),
                       SizedBox(width: 8),
                       ElevatedButton(
@@ -257,28 +489,53 @@ class _UrunProfilState extends State<UrunProfil> {
                       ),
                     ],
                   )
-                      : Center(  // Eğer butonlar yoksa ortada göster
-                    child: Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        RegExp(r'\d\s*(₺|\$|€)$')
-                            .hasMatch(data['fiyat'].toString().trim())
-                            ? data['fiyat'].toString().trim()
-                            : '${data['fiyat']} ₺',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red,
+                      : Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            RegExp(r'\d\s*(₺|\$|€)$')
+                                .hasMatch(fiyat.toString().trim())
+                                ? fiyat.toString().trim()
+                                : '$fiyat ₺',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
+                        SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (hasOffer) {
+                              // Teklifi geri çek
+                              withdrawOffer();
+                            } else {
+                              // Teklif ver dialogu aç
+                              showOfferDialog();
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                            hasOffer ? Colors.grey : Colors.green,
+                          ),
+                          child: Text(
+                            hasOffer ? 'Teklifi Geri Çek' : 'Teklif Ver',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                SizedBox(height: 24),
+                const SizedBox(height: 16),
 
                 Container(
                   padding: EdgeInsets.all(16),

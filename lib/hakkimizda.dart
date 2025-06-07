@@ -217,19 +217,6 @@ class HakkimizdaPage extends StatelessWidget {
                           ),
                           child: Column(
                             children: [
-                              // Yönetim Kurulu Başlığı
-                              const Text(
-                                "YÖNETİM KURULU",
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-
-                              const SizedBox(height: 32),
-
                               // Başkan
                               Container(
                                 padding: const EdgeInsets.all(24),
@@ -257,7 +244,7 @@ class HakkimizdaPage extends StatelessWidget {
                                 ),
                               ),
 
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 48),
 
                               Wrap(
                                 spacing: 24,
@@ -270,19 +257,6 @@ class HakkimizdaPage extends StatelessWidget {
                               ),
 
                               const SizedBox(height: 48),
-
-                              // Koordinatörler Başlığı
-                              const Text(
-                                "KOORDİNATÖRLER",
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-
-                              const SizedBox(height: 32),
 
                               // Koordinatörler (3 sütunlu Wrap)
                               Wrap(
