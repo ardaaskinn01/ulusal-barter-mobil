@@ -242,7 +242,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           drawer: AppDrawer(parentContext: context),
 
           appBar: PreferredSize(
-            preferredSize: const Size.fromHeight(120),
+            preferredSize: const Size.fromHeight(160),
             child: AppBar(
               backgroundColor: Colors.yellow[700],
               elevation: 0,
@@ -348,7 +348,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 );
                               },
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             _buildCompactButton(
                               label: 'Filtre',
                               color: Colors.red[200]!,
@@ -363,70 +363,75 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       )
                     else
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Flexible(
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 8, top: 8),
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  'Barter Bakiyesi: ${NumberFormat.decimalPattern('tr_TR').format(userData?['bakiye'] ?? 0)} ₺',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.red,
-                                    fontSize: 16, // başlangıç fontu, otomatik küçülecek
-                                  ),
-                                  maxLines: 1,
+                          // İlk satır: Barter Bakiyesi
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8, top: 8),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Barter Bakiyesi: ${NumberFormat.decimalPattern('tr_TR').format(userData?['bakiye'] ?? 0)} ₺',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red,
+                                  fontSize: 16,
                                 ),
+                                maxLines: 1,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8),
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                minimumSize: const Size(
-                                  72,
-                                  42,
-                                ), // Buton minimum boyutu
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 2,
-                                ), // Daha dar padding
-                                visualDensity:
-                                    VisualDensity
-                                        .compact, // Daha kompakt görünsün
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => BakiyeGecmisiScreen(
+                          const SizedBox(height: 8),
+                          // İkinci satır: Hesap Geçmişi ve Filtre butonları
+                          Row(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    minimumSize: const Size(72, 42),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => BakiyeGecmisiScreen(
                                           userId: userData?['uid'],
                                         ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.history, size: 21),
+                                  label: const Text(
+                                    'Hesap Geçmişi',
+                                    style: TextStyle(fontSize: 16),
                                   ),
-                                );
-                              },
-                              icon: const Icon(Icons.history, size: 21),
-                              label: const Text(
-                                'Hesap Geçmişi',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                ), // Label yazı boyutunu küçült
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              _buildCompactButton(
+                                label: 'Filtre',
+                                color: Colors.red[200]!,
+                                onPressed: () {
+                                  setState(() {
+                                    showFilterMobile = true;
+                                  });
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
+
                   ],
                 ),
               ),
