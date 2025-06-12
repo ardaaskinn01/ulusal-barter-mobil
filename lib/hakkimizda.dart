@@ -10,7 +10,7 @@ class HakkimizdaPage extends StatelessWidget {
     return Scaffold(
         drawer: AppDrawer(parentContext: context),
         appBar: AppBar(
-          backgroundColor: Colors.transparent, // Şeffaf yapabilirsin
+          backgroundColor: Colors.yellow[700], // Şeffaf yapabilirsin
           elevation: 0,
           title: const Text('Hakkımızda'),
         ),

@@ -16,7 +16,6 @@ class _KayitEkraniState extends State<KayitEkrani> {
 
   final adController = TextEditingController();
   final soyadController = TextEditingController();
-  final telefonController = TextEditingController();
   final adresController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -35,7 +34,6 @@ class _KayitEkraniState extends State<KayitEkrani> {
       final password = passwordController.text.trim();
       final ad = adController.text.trim();
       final soyad = soyadController.text.trim();
-      final telefon = telefonController.text.trim();
       final adres = adresController.text.trim();
 
       final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
@@ -49,7 +47,6 @@ class _KayitEkraniState extends State<KayitEkrani> {
           'uid': user.uid,
           'ad': ad,
           'soyad': soyad,
-          'telefon': telefon,
           'adres': adres,
           'email': email,
           'role': 'user',
@@ -87,8 +84,6 @@ class _KayitEkraniState extends State<KayitEkrani> {
               _buildTextField(adController, 'Ad'),
               const SizedBox(height: 10),
               _buildTextField(soyadController, 'Soyad'),
-              const SizedBox(height: 10),
-              _buildTextField(telefonController, 'Telefon'),
               const SizedBox(height: 10),
               _buildTextField(adresController, 'Adres'),
               const SizedBox(height: 10),
