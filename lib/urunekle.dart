@@ -1,5 +1,6 @@
 import 'dart:io';
-
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -29,6 +30,35 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
   ];
 
   final ImagePicker _picker = ImagePicker();
+
+  Future<void> sendPushNotification(String name) async {
+    final String oneSignalAppId = "d4f432ca-d0cc-4d13-873d-b24b41de5699";
+    final String oneSignalRestApiKey = "os_v2_app_2t2dfswqzrgrhbz5wjfudxswtgoodtrsmpbe4znf3nnrmncrg5triwmlmxgbl7ewjhvumikoguv5mvjy5g2n6frlrdtylklan3hnlji";
+
+    final url = Uri.parse('https://onesignal.com/api/v1/notifications');
+
+    final body = {
+      "app_id": oneSignalAppId,
+      "included_segments": ["All"],  // Tüm kullanıcılara gönder
+      "headings": {"en": "Yeni İlan!"},
+      "contents": {"en": "Sistemimize yeni bir ilan eklendi! Tıkla ve göz at." "$name"},
+    };
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Authorization": "Basic $oneSignalRestApiKey",
+      },
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 200) {
+      print("Push notification sent successfully");
+    } else {
+      print("Failed to send push notification: ${response.body}");
+    }
+  }
 
   Future<void> requestPermissions() async {
     await [
@@ -114,6 +144,7 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
       "aciklamalar": descriptions,
       "userId": user.uid,
       "createdAt": timestamp,
+      "sabitle": false
     });
   }
 
@@ -173,10 +204,15 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
         mainImageUrl: mainUrl,
         extraMediaUrls: extraUrls,
         descriptions: descriptions,
-        id: widget.existingProduct?['id'], // eski id varsa koru
-        createdAt: widget.existingProduct?['createdAt'], // eski createdAt koru
-        oldName: widget.existingProduct?['isim'], // eski isim, name değiştiyse eskiyi silsin diye
+        id: widget.existingProduct?['id'],
+        createdAt: widget.existingProduct?['createdAt'],
+        oldName: widget.existingProduct?['isim'],
       );
+
+// Ürün başarılı kaydedildiyse bildirim gönder
+      if (!isEditMode) {
+        await sendPushNotification(name);
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Ürün kaydedildi.")));
 

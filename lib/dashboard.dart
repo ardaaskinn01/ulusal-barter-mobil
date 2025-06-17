@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart' as auth;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -22,6 +23,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final formatCurrency = NumberFormat.decimalPattern('tr_TR');
+  String soldFilter = 'Tümü';
 
   bool loading = true;
   final TextEditingController _locationController = TextEditingController();
@@ -74,7 +76,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 (product['isim'] ?? '').toString().toLowerCase();
             final location = searchLocation.toLowerCase();
 
-            // Konum: ya konum alanında eşleşecek ya da ürün ismi konum içerecek
+            // Konum eşleşmesi
             final locationMatch =
                 searchLocation.isEmpty ||
                 (product['konum'] != null &&
@@ -83,7 +85,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     )) ||
                 productName.contains(location);
 
-            // Tür: ya seçili türlerden biriyle eşleşecek ya da isimde geçecek
+            // Tür eşleşmesi
             final typeMatch =
                 selectedTypes.isEmpty ||
                 (product['tur'] != null &&
@@ -92,7 +94,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   (type) => productName.contains(type.toLowerCase()),
                 );
 
-            return locationMatch && typeMatch;
+            // Satıldı filtre kontrolü
+            final bool isSold = product['satildi'] == true;
+            final bool soldMatch =
+                soldFilter == 'Tümü' ||
+                (soldFilter == 'Satılanlar' && isSold) ||
+                (soldFilter == 'Satılmayanlar' && !isSold);
+
+            return locationMatch && typeMatch && soldMatch;
           }).toList();
     });
   }
@@ -123,16 +132,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> fetchProducts() async {
-    final snapshot =
-        await _firestore
-            .collection('products')
-            .orderBy('createdAt', descending: true)
-            .get();
+    final snapshot = await _firestore
+        .collection('products')
+        .orderBy('sabitle', descending: true) // Sabitlenmişler en üste
+        .orderBy('createdAt', descending: true) // Daha sonra tarihe göre
+        .get();
 
-    products =
-        snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+    products = snapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id; // doc ID’yi de sakla
+      return data;
+    }).toList();
+
     applyFilters(); // filtreli listeyi de güncelle
   }
+
 
   Future<void> fetchPendingRequests() async {
     final snapshot = await _firestore.collection('users').get();
@@ -210,12 +224,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 );
               }).toList(),
         ),
+        const SizedBox(height: 16),
+        const Text(
+          "Durum",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        const SizedBox(height: 8),
+        Column(
+          children: [
+            RadioListTile<String>(
+              title: const Text("Tümü"),
+              value: 'Tümü',
+              groupValue: soldFilter,
+              onChanged: (value) {
+                setState(() {
+                  soldFilter = value!;
+                });
+                applyFilters();
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text("Satılanlar"),
+              value: 'Satılanlar',
+              groupValue: soldFilter,
+              onChanged: (value) {
+                setState(() {
+                  soldFilter = value!;
+                });
+                applyFilters();
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text("Satılmayanlar"),
+              value: 'Satılmayanlar',
+              groupValue: soldFilter,
+              onChanged: (value) {
+                setState(() {
+                  soldFilter = value!;
+                });
+                applyFilters();
+              },
+            ),
+          ],
+        ),
       ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // Kullanıcı giriş yapmamış
+      Future.microtask(() {
+        // Bu sayfa build edilir edilmez geri dön ve uyarı ver
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('İlanları görüntülemek için giriş yapmalısınız.')),
+        );
+        Navigator.of(context).pop(); // Geri dön
+      });
+
+      return const Scaffold(); // Boş bir scaffold dön ki hata olmasın
+    }
     return loading
         ? Scaffold(
           body: Center(
@@ -241,23 +311,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
           backgroundColor: const Color(0xFFFFF9C4),
           drawer: AppDrawer(parentContext: context),
 
-          appBar: PreferredSize(
-            preferredSize: const Size.fromHeight(160),
-            child: AppBar(
-              backgroundColor: Colors.yellow[700],
-              elevation: 0,
-              automaticallyImplyLeading:
-                  false, // Manuel menü düğmesi kullanıyoruz
-              leading: Builder(
-                builder:
-                    (context) => IconButton(
-                      icon: const Icon(Icons.menu),
-                      onPressed: () {
-                        Scaffold.of(context).openDrawer();
-                      },
-                      tooltip: 'Menüyü Aç',
-                    ),
-              ),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(160),
+        child: AppBar(
+          backgroundColor: Colors.yellow[700],
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          leading: Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+              tooltip: 'Menüyü Aç',
+            ),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.refresh),
+              tooltip: 'Yenile',
+              onPressed: () async {
+                fetchAllData(); // Ürünleri yeniden çek
+                setState(() {});       // Sayfayı yeniden çiz
+              },
+            ),
+          ],
               flexibleSpace: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 48, 16, 0),
                 child: Column(
@@ -296,7 +374,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               onPressed: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (context) => const Bakiye()),
+                                  MaterialPageRoute(
+                                    builder: (context) => const Bakiye(),
+                                  ),
                                 );
                               },
                             ),
@@ -307,7 +387,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               onPressed: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (context) => UrunEkleScreen()),
+                                  MaterialPageRoute(
+                                    builder: (context) => UrunEkleScreen(),
+                                  ),
                                 );
                               },
                             ),
@@ -315,23 +397,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             _buildCompactButton(
                               label: 'İstekler',
                               color: Colors.red[500]!,
-                              trailing: pendingRequests.isNotEmpty
-                                  ? CircleAvatar(
-                                radius: 10,
-                                backgroundColor: Colors.white,
-                                child: Text(
-                                  '${pendingRequests.length}',
-                                  style: const TextStyle(fontSize: 12, color: Colors.red),
-                                ),
-                              )
-                                  : null,
+                              trailing:
+                                  pendingRequests.isNotEmpty
+                                      ? CircleAvatar(
+                                        radius: 10,
+                                        backgroundColor: Colors.white,
+                                        child: Text(
+                                          '${pendingRequests.length}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                      )
+                                      : null,
                               onPressed: () {
                                 showModalBottomSheet(
                                   context: context,
                                   isScrollControlled: true,
                                   backgroundColor: Colors.white,
                                   shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                                    borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(16),
+                                    ),
                                   ),
                                   builder: (_) => buildPendingRequestSheet(),
                                 );
@@ -344,7 +432,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               onPressed: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (context) => OffersPage()),
+                                  MaterialPageRoute(
+                                    builder: (context) => OffersPage(),
+                                  ),
                                 );
                               },
                             ),
@@ -360,7 +450,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ],
                         ),
-
                       )
                     else
                       Column(
@@ -374,9 +463,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               alignment: Alignment.centerLeft,
                               child: Text(
                                 'Barter Bakiyesi: ${NumberFormat.decimalPattern('tr_TR').format(userData?['bakiye'] ?? 0)} ₺',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.red,
+                                  color: Colors.red[600],
                                   fontSize: 16,
                                 ),
                                 maxLines: 1,
@@ -391,7 +480,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 padding: const EdgeInsets.only(left: 8),
                                 child: ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
+                                    backgroundColor: Colors.red[600],
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    minimumSize: const Size(72, 42),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => BakiyeGecmisiScreen(
+                                              userId: userData?['uid'],
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.history, size: 21),
+                                  label: const Text(
+                                    'Hesap Geçmişi',
+                                    style: TextStyle(fontSize: 15),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+// 4. Buton: Favorilerim
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red[400],
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
@@ -401,19 +525,96 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     visualDensity: VisualDensity.compact,
                                   ),
                                   onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => BakiyeGecmisiScreen(
-                                          userId: userData?['uid'],
+                                    final List favorites = userData?['favorites'] ?? [];
+                                    print(userData?['favorites']);
+                                    if (favorites.isEmpty) {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text("Favoriler"),
+                                          content: const Text("Favorilere eklenmiş ilan bulunamadı."),
+                                          actions: [
+                                            TextButton(
+                                              child: const Text("Kapat"),
+                                              onPressed: () => Navigator.of(context).pop(),
+                                            ),
+                                          ],
                                         ),
-                                      ),
-                                    );
+                                      );
+                                    } else {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) {
+                                          return AlertDialog(
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(16),
+                                            ),
+                                            title: const Center(
+                                              child: Text(
+                                                "Favori İlanlarım",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 20,
+                                                ),
+                                              ),
+                                            ),
+                                            content: SizedBox(
+                                              width: double.maxFinite,
+                                              child: ListView.separated(
+                                                shrinkWrap: true,
+                                                separatorBuilder: (context, index) => const SizedBox(height: 8),
+                                                itemCount: favorites.length,
+                                                itemBuilder: (context, index) {
+                                                  final ilan = favorites[index];
+                                                  return Card(
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(12),
+                                                    ),
+                                                    color: Colors.yellow[100],
+                                                    child: ListTile(
+                                                      title: Text(
+                                                        ilan['ilanId'] ?? 'İlan',
+                                                        style: const TextStyle(
+                                                          fontWeight: FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                      trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                                                      onTap: () {
+                                                        Navigator.of(context).pop(); // dialogu kapat
+                                                        Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder: (context) => UrunProfil(
+                                                              id: ilan['ilanId'],
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                            actionsAlignment: MainAxisAlignment.center,
+                                            actions: [
+                                              TextButton.icon(
+                                                onPressed: () => Navigator.of(context).pop(),
+                                                icon: const Icon(Icons.close, color: Colors.red),
+                                                label: const Text(
+                                                  "Kapat",
+                                                  style: TextStyle(color: Colors.red),
+                                                ),
+                                              ),
+                                            ],
+                                          );
+
+                                        },
+                                      );
+                                    }
                                   },
-                                  icon: const Icon(Icons.history, size: 21),
                                   label: const Text(
-                                    'Hesap Geçmişi',
-                                    style: TextStyle(fontSize: 16),
+                                    'Favorilerim',
+                                    style: TextStyle(fontSize: 15),
                                   ),
                                 ),
                               ),
@@ -427,11 +628,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   });
                                 },
                               ),
+
                             ],
                           ),
                         ],
                       ),
-
                   ],
                 ),
               ),
@@ -449,148 +650,160 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: 0.7,
+                                crossAxisSpacing: 6,
+                                mainAxisSpacing: 6,
+                                childAspectRatio: 0.687,
                               ),
                           itemBuilder: (_, index) {
                             final product = filteredProducts[index];
-                            return Card(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 4,
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) =>
-                                              UrunProfil(id: product['isim']),
+                            final bool isSold = product['satildi'] == true;
+
+                            return Stack(
+                              // ← BURADA return eksikti
+                              children: [
+                                Opacity(
+                                  opacity: isSold ? 0.5 : 1.0,
+                                  child: Card(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(12),
-                                      ),
-                                      child: AspectRatio(
-                                        aspectRatio: 1,
-                                        child: Container(
-                                          color: Colors.grey[200],
-                                          child:
-                                              product['anaGorselUrl'] != null
-                                                  ? Image.network(
+                                    elevation: 4,
+                                    child: InkWell(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => UrunProfil(
+                                              id: product['isim'],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: SizedBox(
+                                        height: 280, // 🔧 Kart yüksekliği sabitlendi (isteğe göre ayarla)
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            // Görsel
+                                            ClipRRect(
+                                              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                              child: AspectRatio(
+                                                aspectRatio: 1.0,
+                                                child: Container(
+                                                  color: Colors.grey[200],
+                                                  child: product['anaGorselUrl'] != null
+                                                      ? Image.network(
                                                     product['anaGorselUrl'],
                                                     fit: BoxFit.contain,
                                                   )
-                                                  : const Icon(
+                                                      : const Icon(
                                                     Icons.image_not_supported,
                                                     size: 50,
                                                     color: Colors.grey,
                                                   ),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(8),
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              product['isim'] ?? 'Ürün İsimsiz',
-                                              style: const TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.black87,
+                                                ),
                                               ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Text(
-                                                  product['fiyat'] != null
-                                                      ? (RegExp(
-                                                            r'\d\s*(₺|\$|€)$',
-                                                          ).hasMatch(
-                                                            product['fiyat']
-                                                                .toString()
-                                                                .trim(),
-                                                          )
-                                                          ? product['fiyat']
-                                                          : '${product['fiyat']} ₺')
-                                                      : '',
-                                                  style: const TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.redAccent,
-                                                  ),
-                                                ),
-                                                GestureDetector(
-                                                  onTap: () {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder:
-                                                            (
-                                                              context,
-                                                            ) => UrunProfil(
-                                                              id: product['id'],
+
+                                            // İçerik
+                                            Expanded(
+                                              child: Padding(
+                                                padding: const EdgeInsets.fromLTRB(8, 1, 8, 8),
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    // Başlık
+                                                    Text(
+                                                      product['isim'] ?? 'Ürün İsimsiz',
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: Colors.black87,
+                                                      ),
+                                                      maxLines: 2,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                    const Spacer(), // Boşluk ekler
+
+                                                    // Fiyat ve buton satırı
+                                                    Row(
+                                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                      children: [
+                                                        // Fiyat
+                                                        Expanded(
+                                                          child: Text(
+                                                            product['fiyat'] != null
+                                                                ? (RegExp(r'\d\s*(₺|\$|€)$').hasMatch(product['fiyat'].toString().trim())
+                                                                ? product['fiyat']
+                                                                : '${product['fiyat']} ₺')
+                                                                : '',
+                                                            style: const TextStyle(
+                                                              fontSize: 13,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: Colors.redAccent,
                                                             ),
-                                                      ),
-                                                    );
-                                                  },
-                                                  child: Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 6,
-                                                          vertical: 3,
-                                                        ),
-                                                    decoration: BoxDecoration(
-                                                      color:
-                                                          Colors
-                                                              .deepPurple
-                                                              .shade100,
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            20,
+                                                            maxLines: 2,
+                                                            overflow: TextOverflow.ellipsis,
                                                           ),
+                                                        ),
+                                                        const SizedBox(width: 8),
+
+                                                        // Detay butonu
+                                                        GestureDetector(
+                                                          onTap: () {
+                                                            Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                builder: (context) => UrunProfil(
+                                                                  id: product['id'],
+                                                                ),
+                                                              ),
+                                                            );
+                                                          },
+                                                          child: Container(
+                                                            child: buildActionButton(product, userData!),
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
-                                                    child: const Text(
-                                                      'Detay',
-                                                      style: TextStyle(
-                                                        fontSize: 11,
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                        color:
-                                                            Colors.deepPurple,
-                                                      ),
-                                                    ),
-                                                  ),
+                                                  ],
                                                 ),
-                                              ],
+                                              ),
                                             ),
                                           ],
                                         ),
                                       ),
                                     ),
-                                  ],
+                                  ),
                                 ),
-                              ),
-                            );
+
+                                // 🔴 TAKAS GERÇEKLEŞTİRİLMİŞTİR overlay
+                                if (isSold)
+                                  Positioned.fill(
+                                    child: Center(
+                                      child: Transform.rotate(
+                                        angle: -0.3,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          color: Colors.red.withOpacity(0.8),
+                                          child: const Text(
+                                            "TAKAS GERÇEKLEŞTİRİLMİŞTİR",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ); // ← return burada bitti
                           },
                         ),
               ),
@@ -640,6 +853,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         );
   }
+
+  Widget buildActionButton(Map<String, dynamic> product, Map<String, dynamic> userData) {
+    if (userData['role'] == 'admin') {
+      final isPinned = product['sabitle'] == true;
+
+      return GestureDetector(
+        onTap: () async {
+          try {
+            await FirebaseFirestore.instance
+                .collection('products')
+                .doc(product['id']) // yukarıda fetch'te ID'yi eklemiştik
+                .update({'sabitle': !isPinned});
+
+            // UI güncellensin diye tekrar veri çek
+            await fetchProducts();
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(isPinned ? 'Sıralamaya geri alındı' : 'Üste sabitlendi')),
+            );
+          } catch (e) {
+            print('Sabitleme hatası: $e');
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: isPinned ? Colors.orange.shade100 : Colors.green.shade100,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            isPinned ? 'Kaldır' : 'Sabitle',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: isPinned ? Colors.orange : Colors.green,
+            ),
+          ),
+        ),
+      );
+    } else {
+      // Admin değilse sadece Detay butonu göster
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.deepPurple.shade100,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Text(
+          'Detay',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: Colors.deepPurple,
+          ),
+        ),
+      );
+    }
+  }
+
 
   Widget buildPendingRequestSheet() {
     return DraggableScrollableSheet(
@@ -745,10 +1017,7 @@ Widget _buildCompactButton({
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(label, style: TextStyle(fontSize: 14)),
-        if (trailing != null) ...[
-          SizedBox(height: 4),
-          trailing,
-        ],
+        if (trailing != null) ...[SizedBox(height: 4), trailing],
       ],
     ),
   );

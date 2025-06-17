@@ -17,11 +17,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.0.2</string>
+	<string>2.0.3</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>12</string>
+	<string>13</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -60,5 +60,15 @@
         <key>NSAllowsArbitraryLoads</key>
         <true/>
     </dict>
+    <key>UIBackgroundModes</key>
+    <array>
+      <string>remote-notification</string>
+    </array>
+
+    <key>FirebaseAppDelegateProxyEnabled</key>
+    <false/>
+
+    <key>NSUserTrackingUsageDescription</key>
+    <string>Bu uygulama bildirim göndermek için izninizi istiyor.</string>
 </dict>
 </plist>

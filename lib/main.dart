@@ -6,21 +6,24 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ulusalbarter/sifremiunuttum.dart';
-
+import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'appDrawer.dart';
 import 'dashboard.dart';
 import 'firebase_options.dart';
 import 'kayit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  OneSignal.initialize("d4f432ca-d0cc-4d13-873d-b24b41de5699"); // <-- buraya App ID'yi gir
+
+  OneSignal.Notifications.requestPermission(true);
   // await dotenv.load(fileName: ".env");
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await Supabase.initialize(
     url: "https://rprxugnzyglgmrsubekc.supabase.co",
-    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwcnh1Z256eWdsZ21yc3ViZWtjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgyODY4MzMsImV4cCI6MjA2Mzg2MjgzM30.JLUshxRgPcyvvU_OQsdj-jou8CAlZXBwCJ0Hg-XO9xo",
+    anonKey:
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwcnh1Z256eWdsZ21yc3ViZWtjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgyODY4MzMsImV4cCI6MjA2Mzg2MjgzM30.JLUshxRgPcyvvU_OQsdj-jou8CAlZXBwCJ0Hg-XO9xo",
   );
 
   runApp(const MyApp());
@@ -139,10 +142,11 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final credential = await auth.FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
+      final credential = await auth.FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: emailController.text.trim(),
+            password: passwordController.text.trim(),
+          );
 
       final user = credential.user;
 
@@ -159,7 +163,11 @@ class _LoginScreenState extends State<LoginScreen> {
           return;
         }
 
-        final doc = await FirebaseFirestore.instance.collection("users").doc(refreshedUser.uid).get();
+        final doc =
+            await FirebaseFirestore.instance
+                .collection("users")
+                .doc(refreshedUser.uid)
+                .get();
 
         if (doc.exists) {
           final data = doc.data()!;
@@ -204,6 +212,23 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     return Scaffold(
+      drawer: AppDrawer(parentContext: context),
+      appBar:
+        AppBar(
+          backgroundColor: Colors.yellow[700],
+          elevation: 0,
+          automaticallyImplyLeading: false, // Manuel menü düğmesi kullanıyoruz
+          leading: Builder(
+            builder:
+                (context) => IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () {
+                    Scaffold.of(context).openDrawer();
+                  },
+                  tooltip: 'Menüyü Aç',
+                ),
+          ),
+        ),
       body: Stack(
         children: [
           // Arka plan resmi ve karartma (blur efekti yerine hafif karartma)

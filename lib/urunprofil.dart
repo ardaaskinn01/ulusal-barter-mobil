@@ -15,15 +15,18 @@ class UrunProfil extends StatefulWidget {
 
 class _UrunProfilState extends State<UrunProfil> {
   DocumentSnapshot<Map<String, dynamic>>? product;
+  bool isSold = false;
   User? currentUser;
   bool isAdmin = false; // senin mevcut admin kontrolün
   bool canEdit = false;
   bool hasOffer = false; // kullanıcının teklif verip vermediği
-  String? offerId;       // var olan teklifin id'si
+  String? offerId; // var olan teklifin id'si
   String userName = 'Ad Soyad'; // kullanıcı adı, veritabanından çekilmeli
   int? currentIndex;
+  bool isFavorited = false;
   VideoPlayerController? _videoController;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  List favorites = [];
 
   @override
   void initState() {
@@ -32,17 +35,70 @@ class _UrunProfilState extends State<UrunProfil> {
     fetchProduct();
   }
 
+  Future<void> checkFavoriteStatus() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final userRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid);
+    final userSnap = await userRef.get();
+
+    favorites = userSnap.data()?['favorites'] ?? [];
+
+    final ilanId = product!.data()?['isim'];
+
+    final exists = favorites.any(
+      (fav) => fav['ilanId'] == ilanId || fav['ilanIsmi'] == ilanId,
+    );
+
+    setState(() {
+      isFavorited = exists;
+    });
+  }
+
+  Future<void> toggleFavorite() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final userRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid);
+    final ilanId = product!.data()?['isim'];
+
+    if (isFavorited) {
+      favorites.removeWhere((fav) => fav['ilanId'] == ilanId);
+      await userRef.update({'favorites': favorites});
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Favorilerden çıkarıldı')));
+    } else {
+      favorites.add({'ilanId': ilanId});
+      await userRef.update({'favorites': favorites});
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Favorilere eklendi')));
+    }
+
+    setState(() {
+      isFavorited = !isFavorited;
+    });
+  }
+
   void checkUserOffer() async {
     final productId = product!.data()?['isim'];
     final userId = currentUser?.uid; // oturum açan kullanıcı id'si
 
     if (productId != null) {
-      final offerQuery = await _firestore
-          .collection('offers')
-          .where('productId', isEqualTo: productId)
-          .where('userId', isEqualTo: userId)
-          .limit(1)
-          .get();
+      final offerQuery =
+          await _firestore
+              .collection('offers')
+              .where('productId', isEqualTo: productId)
+              .where('userId', isEqualTo: userId)
+              .limit(1)
+              .get();
 
       if (offerQuery.docs.isNotEmpty) {
         setState(() {
@@ -70,7 +126,9 @@ class _UrunProfilState extends State<UrunProfil> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text(
             'Teklif Ver',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
@@ -83,24 +141,39 @@ class _UrunProfilState extends State<UrunProfil> {
                 children: [
                   TextField(
                     controller: amountController,
-                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     decoration: InputDecoration(
                       labelText: 'Miktar',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.yellow.shade700, width: 2),
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: Colors.yellow.shade700,
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                     ),
                     onChanged: (value) {
                       // Sadece rakamları al (nokta hariç, onu biz ekleyeceğiz)
-                      String digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+                      String digitsOnly = value.replaceAll(
+                        RegExp(r'[^0-9]'),
+                        '',
+                      );
 
                       // Eğer boşsa direk controller'a yazıp çık
                       if (digitsOnly.isEmpty) {
                         amountController.text = '';
-                        amountController.selection = TextSelection.collapsed(offset: 0);
+                        amountController.selection = TextSelection.collapsed(
+                          offset: 0,
+                        );
                         return;
                       }
 
@@ -110,23 +183,32 @@ class _UrunProfilState extends State<UrunProfil> {
                       // Üçlü gruplar yap
                       List<String> chunks = [];
                       for (int i = 0; i < reversed.length; i += 3) {
-                        int end = (i + 3 > reversed.length) ? reversed.length : i + 3;
+                        int end =
+                            (i + 3 > reversed.length) ? reversed.length : i + 3;
                         chunks.add(reversed.substring(i, end));
                       }
 
                       // Noktaları koy ve tekrar ters çevir
-                      String formatted = chunks.join('.').split('').reversed.join('');
+                      String formatted = chunks
+                          .join('.')
+                          .split('')
+                          .reversed
+                          .join('');
 
                       // Güncellemeden önce cursor pozisyonunu ayarla
                       final oldSelection = amountController.selection;
                       amountController.text = formatted;
-                      int newOffset = formatted.length - (value.length - oldSelection.baseOffset);
+                      int newOffset =
+                          formatted.length -
+                          (value.length - oldSelection.baseOffset);
                       if (newOffset < 0) newOffset = 0;
-                      if (newOffset > formatted.length) newOffset = formatted.length;
+                      if (newOffset > formatted.length)
+                        newOffset = formatted.length;
 
-                      amountController.selection = TextSelection.collapsed(offset: newOffset);
+                      amountController.selection = TextSelection.collapsed(
+                        offset: newOffset,
+                      );
                     },
-
                   ),
                   SizedBox(height: 20),
 
@@ -135,34 +217,43 @@ class _UrunProfilState extends State<UrunProfil> {
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.yellow.shade700, width: 2),
+                      border: Border.all(
+                        color: Colors.yellow.shade700,
+                        width: 2,
+                      ),
                       color: Colors.yellow.shade50,
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: selectedCurrency,
-                        icon: Icon(Icons.arrow_drop_down, color: Colors.yellow.shade700),
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          color: Colors.yellow.shade700,
+                        ),
                         dropdownColor: Colors.yellow.shade50,
                         style: TextStyle(color: Colors.black87, fontSize: 16),
-                        items: currencies
-                            .map((cur) => DropdownMenuItem(
-                          value: cur,
-                          child: Row(
-                            children: [
-                              Icon(
-                                cur == '₺'
-                                    ? Icons.currency_lira
-                                    : cur == '\$'
-                                    ? Icons.attach_money
-                                    : Icons.euro,
-                                color: Colors.yellow.shade700,
-                              ),
-                              SizedBox(width: 8),
-                              Text(cur),
-                            ],
-                          ),
-                        ))
-                            .toList(),
+                        items:
+                            currencies
+                                .map(
+                                  (cur) => DropdownMenuItem(
+                                    value: cur,
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          cur == '₺'
+                                              ? Icons.currency_lira
+                                              : cur == '\$'
+                                              ? Icons.attach_money
+                                              : Icons.euro,
+                                          color: Colors.yellow.shade700,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text(cur),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                         onChanged: (value) {
                           if (value != null) {
                             setState(() {
@@ -194,7 +285,9 @@ class _UrunProfilState extends State<UrunProfil> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.yellow.shade700,
                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               onPressed: () async {
@@ -204,7 +297,7 @@ class _UrunProfilState extends State<UrunProfil> {
                 final amount = double.tryParse(rawAmount);
                 if (amount == null || amount <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Geçerli bir miktar girin'))
+                    SnackBar(content: Text('Geçerli bir miktar girin')),
                   );
                   return;
                 }
@@ -228,15 +321,14 @@ class _UrunProfilState extends State<UrunProfil> {
                 Navigator.of(context).pop();
 
                 ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Teklif başarıyla gönderildi'))
+                  SnackBar(content: Text('Teklif başarıyla gönderildi')),
                 );
               },
 
-              child: Text('Teklif Ver', style: TextStyle(color: Colors.black),),
+              child: Text('Teklif Ver', style: TextStyle(color: Colors.black)),
             ),
           ],
         );
-
       },
     );
   }
@@ -251,8 +343,9 @@ class _UrunProfilState extends State<UrunProfil> {
       offerId = null;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Teklif geri çekildi')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Teklif geri çekildi')));
   }
 
   Future<void> fetchUser() async {
@@ -272,6 +365,49 @@ class _UrunProfilState extends State<UrunProfil> {
     });
   }
 
+  Future<void> toggleSatildi() async {
+    if (product == null) return;
+
+    bool newValue = !isSold;
+
+    final confirmation = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text(
+              newValue
+                  ? "Ürünü Satıldı Olarak İşaretle"
+                  : "Satıldı İşaretini Kaldır",
+            ),
+            content: Text(
+              newValue
+                  ? "Bu ürünü gerçekten satıldı olarak işaretlemek istiyor musunuz?"
+                  : "Bu ürünün satıldı işaretini kaldırmak istiyor musunuz?",
+            ),
+            actions: [
+              TextButton(
+                child: Text("İptal"),
+                onPressed: () => Navigator.of(context).pop(false),
+              ),
+              TextButton(
+                child: Text("Evet"),
+                onPressed: () => Navigator.of(context).pop(true),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmation == true) {
+      await _firestore.collection('products').doc(product!.id).update({
+        'satildi': newValue,
+      });
+
+      setState(() {
+        isSold = newValue;
+      });
+    }
+  }
+
   Future<void> fetchProduct() async {
     final doc =
         await FirebaseFirestore.instance
@@ -286,6 +422,9 @@ class _UrunProfilState extends State<UrunProfil> {
       });
     }
     checkUserOffer(); // Ürün yüklendikten sonra çağır
+    checkFavoriteStatus();
+    final data = product!.data();
+    isSold = data?['satildi'] == true;
   }
 
   void openModal(int index) {
@@ -376,7 +515,8 @@ class _UrunProfilState extends State<UrunProfil> {
               color: Colors.yellow.shade800,
               borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)),
             ),
-            child: Center(  // Burada Center ekledik
+            child: Center(
+              // Burada Center ekledik
               child: Text(
                 'İlan Numarası: ${data['id'] ?? ''}',
                 style: TextStyle(
@@ -436,105 +576,152 @@ class _UrunProfilState extends State<UrunProfil> {
 
                 if (fiyat != null)
                   (isAdmin || canEdit)
-                      ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            RegExp(r'\d\s*(₺|\$|€)$')
-                                .hasMatch(fiyat.toString().trim())
-                                ? fiyat.toString().trim()
-                                : '$fiyat ₺',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red,
+                      ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade100,
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: () {
-                          final productData = product!.data();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  UrunEkleScreen(existingProduct: productData),
+                            alignment: Alignment.center,
+                            child: Text(
+                              RegExp(
+                                    r'\d\s*(₺|\$|€)$',
+                                  ).hasMatch(fiyat.toString().trim())
+                                  ? fiyat.toString().trim()
+                                  : '$fiyat ₺',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade700,
-                        ),
-                        child:
-                        Text("Düzenle", style: TextStyle(color: Colors.white)),
-                      ),
-                      SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: handleDelete,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                        ),
-                        child: Text("Sil", style: TextStyle(color: Colors.white)),
-                      ),
-                    ],
-                  )
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              ElevatedButton(
+                                onPressed: () {
+                                  final productData = product!.data();
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => UrunEkleScreen(
+                                            existingProduct: productData,
+                                          ),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red.shade700,
+                                ),
+                                child: const Text(
+                                  "Düzenle",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: handleDelete,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                ),
+                                child: const Text(
+                                  "Sil",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: toggleSatildi,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      isSold
+                                          ? Colors.grey
+                                          : Colors.red.shade300,
+                                ),
+                                child: Text(
+                                  isSold
+                                      ? "İşareti Geri Al"
+                                      : "Satıldı İşaretle",
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
                       : Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            RegExp(r'\d\s*(₺|\$|€)$')
-                                .hasMatch(fiyat.toString().trim())
-                                ? fiyat.toString().trim()
-                                : '$fiyat ₺',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                RegExp(
+                                      r'\d\s*(₺|\$|€)$',
+                                    ).hasMatch(fiyat.toString().trim())
+                                    ? fiyat.toString().trim()
+                                    : '$fiyat ₺',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                            textAlign: TextAlign.center,
-                          ),
+                            const SizedBox(width: 12),
+
+                            // 🔴 Eğer satıldıysa teklif butonunu gösterme
+                            if (!isSold) ...[
+                              ElevatedButton(
+                                onPressed: () {
+                                  if (hasOffer) {
+                                    withdrawOffer();
+                                  } else {
+                                    showOfferDialog();
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      hasOffer ? Colors.grey : Colors.green,
+                                ),
+                                child: Text(
+                                  hasOffer ? 'Teklifi Geri Çek' : 'Teklif Ver',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+
+                              /// ⭐ FAVORİLERE EKLE BUTONU
+                              ElevatedButton.icon(
+                                onPressed: toggleFavorite,
+                                label: Text(
+                                  isFavorited
+                                      ? 'Favorilerden Çıkar'
+                                      : 'Favorilere Ekle',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      isFavorited
+                                          ? Colors.grey
+                                          : Colors.red[300],
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                        SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: () {
-                            if (hasOffer) {
-                              // Teklifi geri çek
-                              withdrawOffer();
-                            } else {
-                              // Teklif ver dialogu aç
-                              showOfferDialog();
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                            hasOffer ? Colors.grey : Colors.green,
-                          ),
-                          child: Text(
-                            hasOffer ? 'Teklifi Geri Çek' : 'Teklif Ver',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
                 const SizedBox(height: 16),
 
                 Container(
@@ -583,9 +770,10 @@ class _UrunProfilState extends State<UrunProfil> {
                             child: Container(
                               width: 100,
                               height: 100,
-                              child: url.endsWith('.mp4')
-                                  ? Icon(Icons.videocam, size: 48)
-                                  : Image.network(url, fit: BoxFit.cover),
+                              child:
+                                  url.endsWith('.mp4')
+                                      ? Icon(Icons.videocam, size: 48)
+                                      : Image.network(url, fit: BoxFit.cover),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
                                 color: Colors.grey.shade200,
@@ -609,17 +797,19 @@ class _UrunProfilState extends State<UrunProfil> {
                   child: Container(
                     color: Colors.black54,
                     child: Center(
-                      child: ekGorseller[currentIndex!].endsWith('.mp4')
-                          ? (_videoController?.value.isInitialized ?? false)
-                          ? AspectRatio(
-                        aspectRatio: _videoController!.value.aspectRatio,
-                        child: VideoPlayer(_videoController!),
-                      )
-                          : CircularProgressIndicator()
-                          : Image.network(
-                        ekGorseller[currentIndex!],
-                        fit: BoxFit.contain,
-                      ),
+                      child:
+                          ekGorseller[currentIndex!].endsWith('.mp4')
+                              ? (_videoController?.value.isInitialized ?? false)
+                                  ? AspectRatio(
+                                    aspectRatio:
+                                        _videoController!.value.aspectRatio,
+                                    child: VideoPlayer(_videoController!),
+                                  )
+                                  : CircularProgressIndicator()
+                              : Image.network(
+                                ekGorseller[currentIndex!],
+                                fit: BoxFit.contain,
+                              ),
                     ),
                   ),
                 ),
