@@ -44,10 +44,7 @@ class AppDrawer extends StatelessWidget {
             if (user == null)
               ListTile(
                 leading: const Icon(Icons.login, color: Colors.greenAccent),
-                title: const Text(
-                  'Giriş Yap',
-                  style: TextStyle(color: Colors.greenAccent),
-                ),
+                title: const Text('Giriş Yap', style: TextStyle(color: Colors.greenAccent)),
                 onTap: () {
                   Navigator.pop(parentContext);
                   Navigator.push(
@@ -60,91 +57,45 @@ class AppDrawer extends StatelessWidget {
             Expanded(
               child: ListView(
                 children: [
-                  if (user != null)
-                    ListTile(
-                      leading: Icon(Icons.home, color: Colors.yellow[500]),
-                      title: Text(
-                        'İlanlar',
-                        style: TextStyle(color: Colors.yellow[500]),
-                      ),
-                      onTap: () {
-                        Navigator.pop(parentContext);
-                        Navigator.push(
-                          parentContext,
-                          MaterialPageRoute(
-                            builder: (_) => const DashboardScreen(),
-                          ),
-                        );
-                      },
-                    ),
+                  ListTile(
+                    leading: Icon(Icons.home, color: Colors.yellow[500]),
+                    title: Text('İlanlar', style: TextStyle(color: Colors.yellow[500])),
+                    onTap: () {
+                      Navigator.pop(parentContext);
+                      Navigator.push(parentContext, MaterialPageRoute(builder: (_) => const DashboardScreen()));
+                    },
+                  ),
                   if (user != null)
                     ListTile(
                       leading: Icon(Icons.person, color: Colors.yellow[500]),
-                      title: Text(
-                        'Profil',
-                        style: TextStyle(color: Colors.yellow[500]),
-                      ),
+                      title: Text('Profil', style: TextStyle(color: Colors.yellow[500])),
                       onTap: () {
                         Navigator.pop(parentContext);
-                        Navigator.push(
-                          parentContext,
-                          MaterialPageRoute(
-                            builder: (_) => const ProfilePage(),
-                          ),
-                        );
+                        Navigator.push(parentContext, MaterialPageRoute(builder: (_) => const ProfilePage()));
                       },
                     ),
                   ListTile(
-                    leading: Icon(
-                      Icons.info_outline,
-                      color: Colors.yellow[500],
-                    ),
-                    title: Text(
-                      'Hakkımızda',
-                      style: TextStyle(color: Colors.yellow[500]),
-                    ),
+                    leading: Icon(Icons.info_outline, color: Colors.yellow[500]),
+                    title: Text('Hakkımızda', style: TextStyle(color: Colors.yellow[500])),
                     onTap: () {
                       Navigator.pop(parentContext);
-                      Navigator.push(
-                        parentContext,
-                        MaterialPageRoute(
-                          builder: (_) => const HakkimizdaPage(),
-                        ),
-                      );
+                      Navigator.push(parentContext, MaterialPageRoute(builder: (_) => const HakkimizdaPage()));
                     },
                   ),
                   ListTile(
-                    leading: Icon(
-                      Icons.compare_arrows,
-                      color: Colors.yellow[500],
-                    ),
-                    title: Text(
-                      'Barter Sistemi',
-                      style: TextStyle(color: Colors.yellow[500]),
-                    ),
+                    leading: Icon(Icons.compare_arrows, color: Colors.yellow[500]),
+                    title: Text('Barter Sistemi', style: TextStyle(color: Colors.yellow[500])),
                     onTap: () {
                       Navigator.pop(parentContext);
-                      Navigator.push(
-                        parentContext,
-                        MaterialPageRoute(builder: (_) => const BarterPage()),
-                      );
+                      Navigator.push(parentContext, MaterialPageRoute(builder: (_) => const BarterPage()));
                     },
                   ),
                   ListTile(
-                    leading: Icon(
-                      Icons.contact_mail,
-                      color: Colors.yellow[500],
-                    ),
-                    title: Text(
-                      'İletişim',
-                      style: TextStyle(color: Colors.yellow[500]),
-                    ),
+                    leading: Icon(Icons.contact_mail, color: Colors.yellow[500]),
+                    title: Text('İletişim', style: TextStyle(color: Colors.yellow[500])),
                     onTap: () {
                       Navigator.pop(parentContext);
-                      Navigator.push(
-                        parentContext,
-                        MaterialPageRoute(builder: (_) => Iletisim()),
-                      );
+                      Navigator.push(parentContext, MaterialPageRoute(builder: (_) => Iletisim()));
                     },
                   ),
                 ],
@@ -154,10 +105,7 @@ class AppDrawer extends StatelessWidget {
             if (user != null) ...[
               ListTile(
                 leading: const Icon(Icons.logout, color: Colors.red),
-                title: const Text(
-                  'Çıkış Yap',
-                  style: TextStyle(color: Colors.red),
-                ),
+                title: const Text('Çıkış Yap', style: TextStyle(color: Colors.red)),
                 onTap: () async {
                   try {
                     await FirebaseAuth.instance.signOut();
@@ -175,41 +123,29 @@ class AppDrawer extends StatelessWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.delete_forever, color: Colors.red),
-                title: const Text(
-                  'Hesabımı Sil',
-                  style: TextStyle(color: Colors.red),
-                ),
+                title: const Text('Hesabımı Sil', style: TextStyle(color: Colors.red)),
                 onTap: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
-                    builder:
-                        (context) => AlertDialog(
-                          title: const Text('Hesabı Sil'),
-                          content: const Text(
-                            'Hesabınızı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
-                          ),
-                          actions: [
-                            TextButton(
-                              child: const Text('Vazgeç'),
-                              onPressed: () => Navigator.of(context).pop(false),
-                            ),
-                            TextButton(
-                              child: const Text(
-                                'Sil',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                              onPressed: () => Navigator.of(context).pop(true),
-                            ),
-                          ],
+                    builder: (context) => AlertDialog(
+                      title: const Text('Hesabı Sil'),
+                      content: const Text('Hesabınızı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.'),
+                      actions: [
+                        TextButton(
+                          child: const Text('Vazgeç'),
+                          onPressed: () => Navigator.of(context).pop(false),
                         ),
+                        TextButton(
+                          child: const Text('Sil', style: TextStyle(color: Colors.red)),
+                          onPressed: () => Navigator.of(context).pop(true),
+                        ),
+                      ],
+                    ),
                   );
 
                   if (confirmed == true) {
                     try {
-                      await FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(user.uid)
-                          .delete();
+                      await FirebaseFirestore.instance.collection('users').doc(user.uid).delete();
                       await user.delete();
 
                       Navigator.pushReplacement(
