@@ -750,7 +750,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                       8,
                                                       1,
                                                       8,
-                                                      8,
+                                                      3,
                                                     ),
                                                 child: Column(
                                                   crossAxisAlignment:
@@ -776,7 +776,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                         product['fiyat'] !=
                                                             null)
                                                       Text(
-                                                        '${product['fiyat']} ₺',
+                                                        product['fiyat'] != null
+                                                            ? (RegExp(r'\d\s*(₺|\$|€)$').hasMatch(product['fiyat'].toString().trim())
+                                                            ? product['fiyat']
+                                                            : '${product['fiyat']} ₺')
+                                                            : '',
                                                         style: const TextStyle(
                                                           fontSize: 13,
                                                           fontWeight:

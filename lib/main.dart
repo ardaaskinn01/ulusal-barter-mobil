@@ -56,13 +56,15 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   @override
+  @override
   void initState() {
     super.initState();
-    // 3 saniye sonra MyHomePage'e geç
-    Timer(const Duration(seconds: 3), () {
+
+    // build tamamlandıktan sonra yönlendir
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
     });
   }
@@ -98,42 +100,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String error = '';
   bool loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    checkCurrentUser();
-  }
-
-  Future<void> checkCurrentUser() async {
-    final user = auth.FirebaseAuth.instance.currentUser;
-
-    if (user != null) {
-      try {
-        await user.reload();
-        final refreshedUser = auth.FirebaseAuth.instance.currentUser;
-
-        if (refreshedUser == null) {
-          setState(() => loading = false);
-          return;
-        }
-
-        final tokenResult = await refreshedUser.getIdTokenResult();
-        if (tokenResult.expirationTime!.isAfter(DateTime.now())) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const DashboardScreen()),
-          );
-          return;
-        }
-      } catch (e) {
-        // Hata oluşursa çıkış yaptır
-        await auth.FirebaseAuth.instance.signOut();
-      }
-    }
-
-    setState(() => loading = false);
-  }
 
   Future<void> handleLogin() async {
     setState(() {
