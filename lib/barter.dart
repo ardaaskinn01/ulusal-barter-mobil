@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'appDrawer.dart';
+import 'languageProvider.dart';
 
 class BarterPage extends StatefulWidget {
   const BarterPage({super.key});
@@ -32,8 +33,7 @@ class _BarterPageState extends State<BarterPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white), // Menü simgesinin rengini beyaz yapar
-        title: const Text(
-          'Barter Sistemi',
+        title: Text(LanguageProvider.translate(context, 'barterSystem'),
           style: TextStyle(color: Colors.white),
         ),
       ),

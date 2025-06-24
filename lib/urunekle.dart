@@ -8,68 +8,33 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'languageProvider.dart';
+
 class UrunEkleScreen extends StatefulWidget {
   final Map<String, dynamic>? existingProduct;
 
-  UrunEkleScreen({this.existingProduct});
+  const UrunEkleScreen({super.key, this.existingProduct});
 
   @override
-  _UrunEkleScreenState createState() => _UrunEkleScreenState();
+  State<UrunEkleScreen> createState() => _UrunEkleScreenState();
 }
 
 class _UrunEkleScreenState extends State<UrunEkleScreen> {
-  final TextEditingController _productNameController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
+  final _productNameController = TextEditingController();
+  final _priceController = TextEditingController();
+  List<TextEditingController> _descriptionControllers = [TextEditingController()];
   List<File> _newExtraMedia = [];
   List<String> _existingExtraMediaUrls = [];
-
   File? _mainImage;
   List<File> _extraMedia = [];
-  List<TextEditingController> _descriptionControllers = [
-    TextEditingController()
-  ];
-
   final ImagePicker _picker = ImagePicker();
 
-  Future<void> sendPushNotification(String name) async {
-    final String oneSignalAppId = "d4f432ca-d0cc-4d13-873d-b24b41de5699";
-    final String oneSignalRestApiKey = "os_v2_app_2t2dfswqzrgrhbz5wjfudxswtgoodtrsmpbe4znf3nnrmncrg5triwmlmxgbl7ewjhvumikoguv5mvjy5g2n6frlrdtylklan3hnlji";
-
-    final url = Uri.parse('https://onesignal.com/api/v1/notifications');
-
-    final body = {
-      "app_id": oneSignalAppId,
-      "included_segments": ["All"],  // Tüm kullanıcılara gönder
-      "headings": {"en": "Yeni İlan!"},
-      "contents": {"en": "Sistemimize yeni bir ilan eklendi! Tıkla ve göz at." "$name"},
-    };
-
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Authorization": "Basic $oneSignalRestApiKey",
-      },
-      body: jsonEncode(body),
-    );
-
-    if (response.statusCode == 200) {
-      print("Push notification sent successfully");
-    } else {
-      print("Failed to send push notification: ${response.body}");
-    }
-  }
-
   Future<void> requestPermissions() async {
-    await [
-      Permission.photos,
-      Permission.storage,
-    ].request();
+    await [Permission.photos, Permission.storage].request();
   }
 
   Future<void> _pickMainImage() async {
-    await requestPermissions(); // izinleri iste
-
+    await requestPermissions();
     final picked = await _picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
       setState(() {
@@ -78,10 +43,8 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
     }
   }
 
-
   Future<void> _pickExtraImages() async {
     await requestPermissions();
-
     final pickedFiles = await _picker.pickMultiImage();
     if (pickedFiles != null) {
       setState(() {
@@ -92,7 +55,6 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
 
   Future<void> _pickExtraVideo() async {
     await requestPermissions();
-
     final pickedVideo = await _picker.pickVideo(source: ImageSource.gallery);
     if (pickedVideo != null) {
       setState(() {
@@ -104,13 +66,27 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
   Future<String> uploadToSupabase(File file, String path) async {
     final supabase = Supabase.instance.client;
     final fileBytes = await file.readAsBytes();
+    await supabase.storage.from('products').uploadBinary(path, fileBytes, fileOptions: FileOptions(upsert: true));
+    return supabase.storage.from('products').getPublicUrl(path);
+  }
 
-    final response = await supabase.storage
-        .from('products') // Bucket adın
-        .uploadBinary(path, fileBytes, fileOptions: FileOptions(upsert: true));
-
-    final publicUrl = supabase.storage.from('products').getPublicUrl(path);
-    return publicUrl;
+  Future<void> sendPushNotification(String name) async {
+    final url = Uri.parse('https://onesignal.com/api/v1/notifications');
+    final body = {
+      "app_id": "d4f432ca-d0cc-4d13-873d-b24b41de5699",
+      "included_segments": ["All"],
+      "headings": {"en": "Yeni İlan!"},
+      "contents": {"en": "Sistemimize yeni bir ilan eklendi! Tıkla ve göz at. $name"},
+    };
+    final response = await http.post(url,
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Authorization": "Basic os_v2_app_2t2dfswqzrgrhbz5wjfudxswtgoodtrsmpbe4znf3nnrmncrg5triwmlmxgbl7ewjhvumikoguv5mvjy5g2n6frlrdtylklan3hnlji"
+        },
+        body: jsonEncode(body));
+    if (response.statusCode != 200) {
+      debugPrint("Push error: ${response.body}");
+    }
   }
 
   Future<void> saveToFirebase({
@@ -121,22 +97,21 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
     required List<String> descriptions,
     String? id,
     Timestamp? createdAt,
-    String? oldName, // eski isim, varsa
+    String? oldName,
   }) async {
     final firestore = FirebaseFirestore.instance;
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) throw Exception("Giriş yapılmamış.");
+    if (user == null) throw Exception("Not logged in");
 
     final timestamp = createdAt ?? Timestamp.now();
-    final docId = name; // Doküman id'si name olacak (senin istediğin gibi)
+    final docId = name;
 
-    // Eğer edit moddaysak ve name değişmişse eski dokümanı sil
     if (oldName != null && oldName != name) {
       await firestore.collection("products").doc(oldName).delete();
     }
 
     await firestore.collection("products").doc(docId).set({
-      "id": id ?? generateIdFromDate(timestamp), // id eski ise eski id kullanılır
+      "id": id ?? generateIdFromDate(timestamp),
       "isim": name,
       "fiyat": price,
       "anaGorselUrl": mainImageUrl,
@@ -144,7 +119,7 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
       "aciklamalar": descriptions,
       "userId": user.uid,
       "createdAt": timestamp,
-      "sabitle": false
+      "sabitle": false,
     });
   }
 
@@ -163,34 +138,28 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
   }
 
   void _submitForm() async {
-    String name = _productNameController.text.trim();
-    String price = _priceController.text.trim();
-
-    // Edit modundaysa ve ana görsel yoksa hata verme
-    bool isEditMode = widget.existingProduct != null;
+    final lang = LanguageProvider.translate;
+    final name = _productNameController.text.trim();
+    final price = _priceController.text.trim();
+    final isEditMode = widget.existingProduct != null;
 
     if (name.isEmpty || price.isEmpty || (!isEditMode && _mainImage == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lütfen ürün ismi, fiyat ve ana görsel ekleyin.")),
+        SnackBar(content: Text(lang(context, 'fillRequiredFields'))),
       );
       return;
     }
 
-    List<String> descriptions = _descriptionControllers.map((e) => e.text.trim()).toList();
+    final descriptions = _descriptionControllers.map((e) => e.text.trim()).toList();
     final safeName = name.replaceAll(RegExp(r'[^\w\s]+'), "_");
 
     try {
-      String mainUrl;
-
+      String mainUrl = widget.existingProduct?['anaGorselUrl'] ?? '';
       if (_mainImage != null) {
-        // Yeni ana görsel seçilmişse upload et
         mainUrl = await uploadToSupabase(_mainImage!, "$safeName/main.jpg");
-      } else {
-        // Edit modunda ana görsel değiştirilmediyse, var olan url'yi kullan
-        mainUrl = widget.existingProduct?['anaGorselUrl'] ?? '';
       }
 
-      List<String> extraUrls = List.from(_existingExtraMediaUrls); // önceki görselleri tut
+      List<String> extraUrls = List.from(_existingExtraMediaUrls);
       for (int i = 0; i < _newExtraMedia.length; i++) {
         final ext = _newExtraMedia[i].path.split('.').last;
         final path = "$safeName/extra_${extraUrls.length + i}.$ext";
@@ -209,15 +178,15 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
         oldName: widget.existingProduct?['isim'],
       );
 
-// Ürün başarılı kaydedildiyse bildirim gönder
-      if (!isEditMode) {
-        await sendPushNotification(name);
-      }
+      if (!isEditMode) await sendPushNotification(name);
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Ürün kaydedildi.")));
-
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(lang(context, 'productSaved'))),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Hata: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("${LanguageProvider.translate(context, 'errorOccurred')}: $e")),
+      );
     }
   }
 
@@ -258,10 +227,12 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final tr = LanguageProvider.translate;
+
     return Scaffold(
       backgroundColor: Colors.yellow[700],
       appBar: AppBar(
-        title: Text("Ürün Ekle"),
+        title: Text(tr(context, 'addProduct')),
         backgroundColor: Colors.yellow[800],
       ),
       body: SingleChildScrollView(
@@ -272,24 +243,24 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
             TextField(
               controller: _productNameController,
               decoration: InputDecoration(
-                labelText: "Ürün İsmi",
+                labelText: tr(context, 'productName'),
                 filled: true,
                 fillColor: Colors.white,
               ),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
 
             // Fiyat
             TextField(
               controller: _priceController,
               decoration: InputDecoration(
-                labelText: "Fiyat",
+                labelText: tr(context, 'price'),
                 filled: true,
                 fillColor: Colors.white,
               ),
               keyboardType: TextInputType.number,
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
 
             // Ana Görsel
             Row(
@@ -299,35 +270,36 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.black,
                   ),
-                  child: Text("Ana Görsel Seç"),
+                  child: Text(tr(context, 'selectMainImage')),
                 ),
-                SizedBox(width: 10),
-                if (_mainImage != null) Text("Seçildi: ${_mainImage!.path.split('/').last}"),
+                const SizedBox(width: 10),
+                if (_mainImage != null)
+                  Text("${tr(context, 'selectMainImage')}: ${_mainImage!.path.split('/').last}"),
               ],
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
 
             // Ek Medya
             Row(
               children: [
                 ElevatedButton(
                   onPressed: _pickExtraImages,
-                  child: Text("Ek Fotoğraf Seç", style: TextStyle(color: Colors.black),),
+                  child: Text(tr(context, 'addExtraImages'), style: const TextStyle(color: Colors.black)),
                 ),
-
+                const SizedBox(width: 8),
                 ElevatedButton(
                   onPressed: _pickExtraVideo,
-                  child: Text("Ek Video Seç", style: TextStyle(color: Colors.black),),
+                  child: Text(tr(context, 'addVideo'), style: const TextStyle(color: Colors.black)),
                 ),
               ],
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
 
             // Açıklamalar
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Ürün Açıklamaları:"),
+                Text("${tr(context, 'description')}:"),
                 ..._descriptionControllers.asMap().entries.map(
                       (entry) {
                     int i = entry.key;
@@ -336,7 +308,7 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
                       child: TextField(
                         controller: entry.value,
                         decoration: InputDecoration(
-                          labelText: "Açıklama ${i + 1}",
+                          labelText: "${tr(context, 'description')} ${i + 1}",
                           filled: true,
                           fillColor: Colors.white,
                         ),
@@ -351,22 +323,22 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
                       style: ElevatedButton.styleFrom(
                         foregroundColor: Colors.black,
                       ),
-                      child: Text("Açıklama Ekle"),
+                      child: Text(tr(context, 'addDesc')),
                     ),
-                    SizedBox(width: 10),
+                    const SizedBox(width: 10),
                     ElevatedButton(
                       onPressed: _removeDescription,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: Colors.black,
                         foregroundColor: Colors.white,
                       ),
-                      child: Text("Açıklama Sil"),
+                      child: Text(tr(context, 'removeDesc')),
                     ),
                   ],
                 ),
               ],
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
 
             // Kaydet Butonu
             ElevatedButton(
@@ -374,9 +346,12 @@ class _UrunEkleScreenState extends State<UrunEkleScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
-              child: Text("Ürünü Kaydet", style: TextStyle(fontSize: 18)),
+              child: Text(
+                tr(context, 'saveProduct'),
+                style: const TextStyle(fontSize: 18),
+              ),
             ),
           ],
         ),

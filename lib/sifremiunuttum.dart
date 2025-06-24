@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'languageProvider.dart';
 
 class SifremiUnuttumScreen extends StatefulWidget {
   const SifremiUnuttumScreen({super.key});
@@ -26,12 +27,11 @@ class _SifremiUnuttumScreenState extends State<SifremiUnuttumScreen> {
         email: emailController.text.trim(),
       );
       setState(() {
-        infoMessage =
-        "Şifre sıfırlama bağlantısı mail adresinize gönderildi. Lütfen mailinizi kontrol edin.";
+        infoMessage = LanguageProvider.translate(context, 'resetLinkSent');
       });
     } catch (e) {
       setState(() {
-        errorMessage = "Bir hata oluştu. Lütfen mail adresinizi kontrol edin.";
+        errorMessage = LanguageProvider.translate(context, 'resetError');
       });
     }
 
@@ -45,7 +45,6 @@ class _SifremiUnuttumScreenState extends State<SifremiUnuttumScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Arka plan resmi ve karartma
           SizedBox.expand(
             child: ColorFiltered(
               colorFilter: ColorFilter.mode(
@@ -77,9 +76,9 @@ class _SifremiUnuttumScreenState extends State<SifremiUnuttumScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'Şifremi Unuttum',
-                      style: TextStyle(
+                    Text(
+                      LanguageProvider.translate(context, 'forgotPassword'),
+                      style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
@@ -91,15 +90,14 @@ class _SifremiUnuttumScreenState extends State<SifremiUnuttumScreen> {
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
-                        labelText: 'E-posta adresiniz',
+                        labelText: LanguageProvider.translate(context, 'emailLabel'),
                         labelStyle: const TextStyle(color: Colors.black),
                         enabledBorder: OutlineInputBorder(
                           borderSide: const BorderSide(color: Colors.grey),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderSide:
-                          const BorderSide(color: Color(0xFFFFD700), width: 2),
+                          borderSide: const BorderSide(color: Color(0xFFFFD700), width: 2),
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
@@ -122,8 +120,7 @@ class _SifremiUnuttumScreenState extends State<SifremiUnuttumScreen> {
                     const SizedBox(height: 16),
 
                     ElevatedButton(
-                      onPressed:
-                      loading || emailController.text.trim().isEmpty
+                      onPressed: loading || emailController.text.trim().isEmpty
                           ? null
                           : handleResetPassword,
                       style: ElevatedButton.styleFrom(
@@ -137,7 +134,10 @@ class _SifremiUnuttumScreenState extends State<SifremiUnuttumScreen> {
                         textStyle: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       child: Text(
-                          loading ? 'Gönderiliyor...' : 'Şifre Sıfırlama Bağlantısı Gönder'),
+                        loading
+                            ? LanguageProvider.translate(context, 'sending')
+                            : LanguageProvider.translate(context, 'sendResetLink'),
+                      ),
                     ),
 
                     const SizedBox(height: 10),
@@ -146,9 +146,9 @@ class _SifremiUnuttumScreenState extends State<SifremiUnuttumScreen> {
                       onPressed: () {
                         Navigator.pop(context);
                       },
-                      child: const Text(
-                        'Geri Dön',
-                        style: TextStyle(
+                      child: Text(
+                        LanguageProvider.translate(context, 'goBack'),
+                        style: const TextStyle(
                           color: Color(0xFFB8860B),
                           fontWeight: FontWeight.w600,
                         ),

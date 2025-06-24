@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
 import 'main.dart';
+import 'languageProvider.dart';
 
 class KayitEkrani extends StatefulWidget {
   const KayitEkrani({super.key});
@@ -55,7 +55,6 @@ class _KayitEkraniState extends State<KayitEkrani> {
           'createdAt': FieldValue.serverTimestamp(),
         });
 
-        // Kayıt başarılı → login ekranına yönlendir
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -63,7 +62,7 @@ class _KayitEkraniState extends State<KayitEkrani> {
       }
     } on FirebaseAuthException catch (e) {
       setState(() {
-        error = e.message ?? 'Bir hata oluştu.';
+        error = e.message ?? LanguageProvider.translate(context, 'genericError');
         loading = false;
       });
     }
@@ -72,7 +71,7 @@ class _KayitEkraniState extends State<KayitEkrani> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Kayıt Ol')),
+      appBar: AppBar(title: Text(LanguageProvider.translate(context, 'register'))),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -81,15 +80,23 @@ class _KayitEkraniState extends State<KayitEkrani> {
           key: _formKey,
           child: Column(
             children: [
-              _buildTextField(adController, 'Ad'),
+              _buildTextField(adController, LanguageProvider.translate(context, 'firstName')),
               const SizedBox(height: 10),
-              _buildTextField(soyadController, 'Soyad'),
+              _buildTextField(soyadController, LanguageProvider.translate(context, 'lastName')),
               const SizedBox(height: 10),
-              _buildTextField(adresController, 'Adres'),
+              _buildTextField(adresController, LanguageProvider.translate(context, 'address')),
               const SizedBox(height: 10),
-              _buildTextField(emailController, 'E-posta', type: TextInputType.emailAddress),
+              _buildTextField(
+                emailController,
+                LanguageProvider.translate(context, 'email'),
+                type: TextInputType.emailAddress,
+              ),
               const SizedBox(height: 10),
-              _buildTextField(passwordController, 'Şifre', isPassword: true),
+              _buildTextField(
+                passwordController,
+                LanguageProvider.translate(context, 'password'),
+                isPassword: true,
+              ),
               if (error.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 10),
@@ -108,7 +115,7 @@ class _KayitEkraniState extends State<KayitEkrani> {
                   ),
                   textStyle: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                child: const Text('Kayıt Ol'),
+                child: Text(LanguageProvider.translate(context, 'register')),
               ),
             ],
           ),

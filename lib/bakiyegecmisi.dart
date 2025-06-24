@@ -1,32 +1,32 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:ulusalbarter/languageProvider.dart';
 
 class BakiyeGecmisiScreen extends StatelessWidget {
   final String userId;
 
   const BakiyeGecmisiScreen({required this.userId, Key? key}) : super(key: key);
 
-  String formatDateTr(DateTime dateTime) {
-    const List<String> aylar = [
-      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
-    ];
+  String formatDate(BuildContext context, DateTime dateTime) {
+    final months = LanguageProvider.getMonths(context);
+    final String gun = dateTime.day.toString().padLeft(2, '0');
+    final String ay = (dateTime.month >= 1 && dateTime.month <= 12)
+        ? months[dateTime.month - 1]
+        : '';
+    final String yil = dateTime.year.toString();
 
-    String gun = dateTime.day.toString().padLeft(2, '0');
-    String ay = aylar[dateTime.month - 1];
-    String yil = dateTime.year.toString();
-
-    String saat = dateTime.hour.toString().padLeft(2, '0');
-    String dakika = dateTime.minute.toString().padLeft(2, '0');
+    final String saat = dateTime.hour.toString().padLeft(2, '0');
+    final String dakika = dateTime.minute.toString().padLeft(2, '0');
 
     return '$gun $ay $yil - $saat:$dakika';
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bakiye Geçmişi'),
+        title: Text(LanguageProvider.translate(context, 'history')),
         backgroundColor: Colors.blueAccent,
         centerTitle: true,
       ),
@@ -46,12 +46,12 @@ class BakiyeGecmisiScreen extends StatelessWidget {
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.history, size: 80, color: Colors.grey),
-                  SizedBox(height: 12),
+                children: [
+                  const Icon(Icons.history, size: 80, color: Colors.grey),
+                  const SizedBox(height: 12),
                   Text(
-                    'İşlem geçmişi bulunamadı.',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                    LanguageProvider.translate(context, 'noTransactionHistory'),
+                    style: const TextStyle(fontSize: 18, color: Colors.grey),
                   ),
                 ],
               ),
@@ -104,7 +104,7 @@ class BakiyeGecmisiScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          formatDateTr(tarih),
+                          formatDate(context, tarih),
                           style: const TextStyle(fontSize: 12, color: Colors.black54),
                         ),
                       ],

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:ulusalbarter/teklifler.dart';
 import 'package:ulusalbarter/urunekle.dart';
 import 'package:ulusalbarter/urunprofil.dart';
@@ -10,6 +11,7 @@ import 'package:ulusalbarter/urunprofil.dart';
 import 'appDrawer.dart';
 import 'bakiye.dart';
 import 'bakiyegecmisi.dart';
+import 'languageProvider.dart';
 import 'main.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -30,37 +32,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Arama yapılan konumu tutar
   String searchLocation = '';
-
-  // Tüm ürün türlerinin listesi (örnek değerlerle)
-  List<String> productTypes = [
-    "Arsa",
-    "Arazi",
-    "Otel",
-    "Hizmet",
-    "Çiftlik",
-    "Daire",
-    "Villa",
-    "Santral",
-    "Restaurant",
-    "Bahçe",
-    "Tarla",
-    "Parsel",
-    "Tesis",
-    "Zeytinlik",
-    "Fabrika",
-    "Beyaz Eşya",
-    "Ofis",
-    "Ev",
-    "Malikane",
-    "Tatil Köyü",
-    "Taksi",
-    "Tekstil",
-    "Peyzaj",
-    "Sera",
-    "Estetik",
-  ];
+  List<String> productTypes = [];
 
   // Seçili ürün türleri
+  List<String> productTypesTR = [];
+  List<String> productTypesLocalized = [];
+  Set<String> selectedTypesTR = {};
   Set<String> selectedTypes = {};
   bool showFilterMobile = false;
   Map<String, dynamic>? userData;
@@ -70,46 +47,165 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void applyFilters() {
     setState(() {
-      filteredProducts =
-          products.where((product) {
-            final productName =
-                (product['isim'] ?? '').toString().toLowerCase();
-            final location = searchLocation.toLowerCase();
+      final selectedIndexes = selectedTypesTR
+          .map((trType) => productTypesTR.indexOf(trType))
+          .where((index) => index != -1)
+          .toSet();
 
-            // Konum eşleşmesi
-            final locationMatch =
-                searchLocation.isEmpty ||
-                (product['konum'] != null &&
-                    product['konum'].toString().toLowerCase().contains(
-                      location,
-                    )) ||
-                productName.contains(location);
+      filteredProducts = products.where((product) {
+        final productName = (product['isim'] ?? '').toString().toLowerCase();
+        final location = searchLocation.toLowerCase();
 
-            // Tür eşleşmesi
-            final typeMatch =
-                selectedTypes.isEmpty ||
-                (product['tur'] != null &&
-                    selectedTypes.contains(product['tur'])) ||
-                selectedTypes.any(
-                  (type) => productName.contains(type.toLowerCase()),
-                );
+        // Konum eşleşmesi
+        final locationMatch = searchLocation.isEmpty ||
+            (product['konum'] != null &&
+                product['konum'].toString().toLowerCase().contains(location)) ||
+            productName.contains(location);
 
-            // Satıldı filtre kontrolü
-            final bool isSold = product['satildi'] == true;
-            final bool soldMatch =
-                soldFilter == 'Tümü' ||
-                (soldFilter == 'Satılanlar' && isSold) ||
-                (soldFilter == 'Satılmayanlar' && !isSold);
+        // Ürün türünün Türkçe listedeki indeksi
+        final productTypeIndex = productTypesTR.indexOf(product['tur'] ?? '');
 
-            return locationMatch && typeMatch && soldMatch;
-          }).toList();
+        // Tür eşleşmesi
+        final typeMatch = selectedIndexes.isEmpty ||
+            // İndeks bazlı tam eşleşme
+            (productTypeIndex != -1 && selectedIndexes.contains(productTypeIndex)) ||
+            // Alternatif: Ürün ismi içinde seçilen tiplerden biri geçiyor mu?
+            selectedTypesTR.any((trType) => productName.contains(trType.toLowerCase()));
+
+        // Satıldı filtre kontrolü
+        final bool isSold = product['satildi'] == true;
+        final bool soldMatch = soldFilter == 'Tümü' ||
+            (soldFilter == 'Satılanlar' && isSold) ||
+            (soldFilter == 'Satılmayanlar' && !isSold);
+
+        return locationMatch && typeMatch && soldMatch;
+      }).toList();
     });
+  }
+
+  Widget buildFilterPanel() {
+    final lang = LanguageProvider.translate;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          lang(context, 'searchLocation'),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _locationController,
+          decoration: InputDecoration(
+            hintText: lang(context, 'hintLocation'),
+            filled: true,
+            fillColor: Colors.grey[100],
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderSide: const BorderSide(color: Colors.grey),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          onChanged: (value) {
+            setState(() {
+              searchLocation = value;
+            });
+            applyFilters();
+          },
+        ),
+        const SizedBox(height: 16),
+        Text(
+          lang(context, 'type'),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        const SizedBox(height: 8),
+        Column(
+          children: List.generate(productTypesLocalized.length, (index) {
+            final localizedType = productTypesLocalized[index];
+            final trType = productTypesTR[index];
+
+            return CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(localizedType),
+              value: selectedTypesTR.contains(trType),
+              onChanged: (value) {
+                setState(() {
+                  if (value == true) {
+                    selectedTypesTR.add(trType);
+                  } else {
+                    selectedTypesTR.remove(trType);
+                  }
+                });
+                applyFilters();
+              },
+            );
+          }),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          lang(context, 'status'),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        const SizedBox(height: 8),
+        Column(
+          children: [
+            RadioListTile<String>(
+              title: Text(lang(context, 'all')),
+              value: 'Tümü',
+              groupValue: soldFilter,
+              onChanged: (value) {
+                setState(() {
+                  soldFilter = value!;
+                });
+                applyFilters();
+              },
+            ),
+            RadioListTile<String>(
+              title: Text(lang(context, 'sold')),
+              value: 'Satılanlar',
+              groupValue: soldFilter,
+              onChanged: (value) {
+                setState(() {
+                  soldFilter = value!;
+                });
+                applyFilters();
+              },
+            ),
+            RadioListTile<String>(
+              title: Text(lang(context, 'unsold')),
+              value: 'Satılmayanlar',
+              groupValue: soldFilter,
+              onChanged: (value) {
+                setState(() {
+                  soldFilter = value!;
+                });
+                applyFilters();
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    productTypesTR = LanguageProvider.getProductTypesTR();
+    productTypesLocalized = Provider.of<LanguageProvider>(context, listen: false).productTypes;
+    print("Locale: ${Provider.of<LanguageProvider>(context, listen: false).currentLocale.languageCode}");
+    print("Localized Product Types: $productTypesLocalized");
+    setState((){}); // Eğer UI güncellemesi gerekiyorsa
   }
 
   @override
   void initState() {
     super.initState();
     fetchAllData();
+    // Burada provider’dan değer alma, sadece veri çağrıları vs. yap
   }
 
   Future<void> fetchAllData() async {
@@ -168,110 +264,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() {});
   }
 
-  Widget buildFilterPanel() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Konum Ara",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _locationController,
-          decoration: InputDecoration(
-            hintText: "Şehir, ilçe...",
-            filled: true,
-            fillColor: Colors.grey[100],
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
-            border: OutlineInputBorder(
-              borderSide: const BorderSide(color: Colors.grey),
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          onChanged: (value) {
-            setState(() {
-              searchLocation = value;
-            });
-            applyFilters();
-          },
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          "Tür",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        const SizedBox(height: 8),
-        Column(
-          children:
-              productTypes.map((type) {
-                return CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(type),
-                  value: selectedTypes.contains(type),
-                  onChanged: (value) {
-                    setState(() {
-                      if (value == true) {
-                        selectedTypes.add(type);
-                      } else {
-                        selectedTypes.remove(type);
-                      }
-                    });
-                    applyFilters();
-                  },
-                );
-              }).toList(),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          "Durum",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        const SizedBox(height: 8),
-        Column(
-          children: [
-            RadioListTile<String>(
-              title: const Text("Tümü"),
-              value: 'Tümü',
-              groupValue: soldFilter,
-              onChanged: (value) {
-                setState(() {
-                  soldFilter = value!;
-                });
-                applyFilters();
-              },
-            ),
-            RadioListTile<String>(
-              title: const Text("Satılanlar"),
-              value: 'Satılanlar',
-              groupValue: soldFilter,
-              onChanged: (value) {
-                setState(() {
-                  soldFilter = value!;
-                });
-                applyFilters();
-              },
-            ),
-            RadioListTile<String>(
-              title: const Text("Satılmayanlar"),
-              value: 'Satılmayanlar',
-              groupValue: soldFilter,
-              onChanged: (value) {
-                setState(() {
-                  soldFilter = value!;
-                });
-                applyFilters();
-              },
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -288,9 +280,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'İçerik Yükleniyor...',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  LanguageProvider.translate(context, 'loadingContent'),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -335,7 +327,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 48),
                       child: Text(
-                        'Hoşgeldiniz, ${userData?['ad'] ?? ''} ${userData?['soyad'] ?? ''}',
+                        '${LanguageProvider.translate(context, 'welcomeUser')} ${userData?['ad'] ?? ''} ${userData?['soyad'] ?? ''}',
                         style: const TextStyle(fontSize: 18),
                       ),
                     ),
@@ -343,7 +335,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 48),
                       child: Text(
-                        '${products.length} ürün listeleniyor',
+                        '${products.length} ${LanguageProvider.translate(context, 'productCount')}',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.black54,
@@ -442,17 +434,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       )
                     else
-                      Column(
+                      user == null
+                          ? Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          _buildCompactButton(
+                            label: LanguageProvider.translate(context, 'filter'),
+                            color: Colors.red[200]!,
+                            onPressed: () {
+                              setState(() {
+                                showFilterMobile = true;
+                              });
+                            },
+                          ),
+                        ],
+                      )
+                          : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // İlk satır: Barter Bakiyesi
+                          // 🔴 Barter Bakiyesi
                           Padding(
                             padding: const EdgeInsets.only(left: 8, top: 8),
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                'Barter Bakiyesi: ${NumberFormat.decimalPattern('tr_TR').format(userData?['bakiye'] ?? 0)} ₺',
+                                '${LanguageProvider.translate(context, 'barterBalance')}: ${NumberFormat.decimalPattern('tr_TR').format(userData?['bakiye'] ?? 0)} ₺',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.red[600],
@@ -463,9 +470,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          // İkinci satır: Hesap Geçmişi ve Filtre butonları
+
+                          // 🔴 Butonlar
                           Row(
                             children: [
+                              // Hesap Geçmişi Butonu
                               Padding(
                                 padding: const EdgeInsets.only(left: 8),
                                 child: ElevatedButton.icon(
@@ -476,31 +485,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     minimumSize: const Size(72, 42),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
                                     visualDensity: VisualDensity.compact,
                                   ),
                                   onPressed: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder:
-                                            (context) => BakiyeGecmisiScreen(
-                                              userId: userData?['uid'],
-                                            ),
+                                        builder: (context) => BakiyeGecmisiScreen(
+                                          userId: userData?['uid'],
+                                        ),
                                       ),
                                     );
                                   },
                                   icon: const Icon(Icons.history, size: 21),
-                                  label: const Text(
-                                    'Hesap Geçmişi',
-                                    style: TextStyle(fontSize: 15),
+                                  label: Text(
+                                    LanguageProvider.translate(context, 'accountHistory'),
+                                    style: const TextStyle(fontSize: 15),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              // 4. Buton: Favorilerim
+
+                              // Favorilerim Butonu
                               Padding(
                                 padding: const EdgeInsets.only(left: 8),
                                 child: ElevatedButton.icon(
@@ -511,35 +518,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     minimumSize: const Size(72, 42),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
                                     visualDensity: VisualDensity.compact,
                                   ),
                                   onPressed: () {
-                                    final List favorites =
-                                        userData?['favorites'] ?? [];
-                                    print(userData?['favorites']);
+                                    final List favorites = userData?['favorites'] ?? [];
                                     if (favorites.isEmpty) {
                                       showDialog(
                                         context: context,
-                                        builder:
-                                            (context) => AlertDialog(
-                                              title: const Text("Favoriler"),
-                                              content: const Text(
-                                                "Favorilere eklenmiş ilan bulunamadı.",
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  child: const Text("Kapat"),
-                                                  onPressed:
-                                                      () =>
-                                                          Navigator.of(
-                                                            context,
-                                                          ).pop(),
-                                                ),
-                                              ],
+                                        builder: (context) => AlertDialog(
+                                          title: Text(LanguageProvider.translate(context, 'favorites')),
+                                          content: Text(LanguageProvider.translate(context, 'noFavoritesFound')),
+                                          actions: [
+                                            TextButton(
+                                              child: Text(LanguageProvider.translate(context, 'close')),
+                                              onPressed: () => Navigator.of(context).pop(),
                                             ),
+                                          ],
+                                        ),
                                       );
                                     } else {
                                       showDialog(
@@ -547,13 +543,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         builder: (context) {
                                           return AlertDialog(
                                             shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
+                                              borderRadius: BorderRadius.circular(16),
                                             ),
-                                            title: const Center(
+                                            title: Center(
                                               child: Text(
-                                                "Favori İlanlarım",
-                                                style: TextStyle(
+                                                LanguageProvider.translate(context, 'myFavoriteAds'),
+                                                style: const TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 20,
                                                 ),
@@ -563,49 +558,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                               width: double.maxFinite,
                                               child: ListView.separated(
                                                 shrinkWrap: true,
-                                                separatorBuilder:
-                                                    (context, index) =>
-                                                        const SizedBox(
-                                                          height: 8,
-                                                        ),
+                                                separatorBuilder: (context, index) => const SizedBox(height: 8),
                                                 itemCount: favorites.length,
                                                 itemBuilder: (context, index) {
                                                   final ilan = favorites[index];
                                                   return Card(
                                                     shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
+                                                      borderRadius: BorderRadius.circular(12),
                                                     ),
                                                     color: Colors.yellow[100],
                                                     child: ListTile(
                                                       title: Text(
-                                                        ilan['ilanId'] ??
-                                                            'İlan',
-                                                        style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                        ),
+                                                        ilan['ilanId'] ?? LanguageProvider.translate(context, 'ad'),
+                                                        style: const TextStyle(fontWeight: FontWeight.w600),
                                                       ),
-                                                      trailing: const Icon(
-                                                        Icons.arrow_forward_ios,
-                                                        size: 18,
-                                                      ),
+                                                      trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                                                       onTap: () {
-                                                        Navigator.of(
-                                                          context,
-                                                        ).pop(); // dialogu kapat
+                                                        Navigator.of(context).pop(); // dialogu kapat
                                                         Navigator.push(
                                                           context,
                                                           MaterialPageRoute(
-                                                            builder:
-                                                                (
-                                                                  context,
-                                                                ) => UrunProfil(
-                                                                  id:
-                                                                      ilan['ilanId'],
-                                                                ),
+                                                            builder: (context) => UrunProfil(id: ilan['ilanId']),
                                                           ),
                                                         );
                                                       },
@@ -614,24 +587,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                 },
                                               ),
                                             ),
-                                            actionsAlignment:
-                                                MainAxisAlignment.center,
+                                            actionsAlignment: MainAxisAlignment.center,
                                             actions: [
                                               TextButton.icon(
-                                                onPressed:
-                                                    () =>
-                                                        Navigator.of(
-                                                          context,
-                                                        ).pop(),
-                                                icon: const Icon(
-                                                  Icons.close,
-                                                  color: Colors.red,
-                                                ),
-                                                label: const Text(
-                                                  "Kapat",
-                                                  style: TextStyle(
-                                                    color: Colors.red,
-                                                  ),
+                                                onPressed: () => Navigator.of(context).pop(),
+                                                icon: const Icon(Icons.close, color: Colors.red),
+                                                label: Text(
+                                                  LanguageProvider.translate(context, 'close'),
+                                                  style: const TextStyle(color: Colors.red),
                                                 ),
                                               ),
                                             ],
@@ -640,15 +603,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       );
                                     }
                                   },
-                                  label: const Text(
-                                    'Favorilerim',
-                                    style: TextStyle(fontSize: 15),
+                                  label: Text(
+                                    LanguageProvider.translate(context, 'myFavorites'),
+                                    style: const TextStyle(fontSize: 15),
                                   ),
                                 ),
                               ),
                               const SizedBox(width: 8),
+
+                              // Filtre Butonu
                               _buildCompactButton(
-                                label: 'Filtre',
+                                label: LanguageProvider.translate(context, 'filter'),
                                 color: Colors.red[200]!,
                                 onPressed: () {
                                   setState(() {
@@ -671,7 +636,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child:
                     products.isEmpty
-                        ? const Center(child: Text("Hiç ürün bulunamadı."))
+                        ? Center(child:Text(LanguageProvider.translate(context, 'noProductsFound')))
                         : GridView.builder(
                           itemCount: filteredProducts.length,
                           gridDelegate:
@@ -757,9 +722,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                       CrossAxisAlignment.start,
                                                   children: [
                                                     // Başlık
-                                                    Text(
-                                                      product['isim'] ??
-                                                          'Ürün İsimsiz',
+                                                Text(
+                                                product['isim'] ?? LanguageProvider.translate(context, 'unnamedProduct'),
+
                                                       style: const TextStyle(
                                                         fontSize: 13,
                                                         fontWeight:
@@ -777,9 +742,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                             null)
                                                       Text(
                                                         product['fiyat'] != null
-                                                            ? (RegExp(r'\d\s*(₺|\$|€)$').hasMatch(product['fiyat'].toString().trim())
-                                                            ? product['fiyat']
-                                                            : '${product['fiyat']} ₺')
+                                                            ? (RegExp(
+                                                                  r'\d\s*(₺|\$|€)$',
+                                                                ).hasMatch(
+                                                                  product['fiyat']
+                                                                      .toString()
+                                                                      .trim(),
+                                                                )
+                                                                ? product['fiyat']
+                                                                : '${product['fiyat']} ₺')
                                                             : '',
                                                         style: const TextStyle(
                                                           fontSize: 13,
@@ -791,7 +762,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                       )
                                                     else if (user == null)
                                                       Text(
-                                                        'Fiyatı görmek için giriş yapın',
+                                                        LanguageProvider.translate(
+                                                          context,
+                                                          'loginToSeePrice',
+                                                        ),
                                                         style: TextStyle(
                                                           fontSize: 11,
                                                           color:
@@ -811,17 +785,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                       children: [
                                                         GestureDetector(
                                                           onTap: () {
-                                                            if (user == null) {
-                                                              ScaffoldMessenger.of(
-                                                                context,
-                                                              ).showSnackBar(
-                                                                const SnackBar(
-                                                                  content: Text(
-                                                                    "Detaylara erişmek için lütfen giriş yapın.",
-                                                                  ),
-                                                                ),
-                                                              );
-                                                            } else {
+
                                                               Navigator.push(
                                                                 context,
                                                                 MaterialPageRoute(
@@ -834,37 +798,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                                       ),
                                                                 ),
                                                               );
-                                                            }
-                                                          },
+                                                            },
                                                           child: Container(
                                                             padding:
                                                                 const EdgeInsets.symmetric(
-                                                                  horizontal:
-                                                                      2,
+                                                                  horizontal: 2,
                                                                   vertical: 2,
                                                                 ),
                                                             decoration: BoxDecoration(
                                                               color:
                                                                   user != null
                                                                       ? Colors
-                                                                          .blue
+                                                                          .indigo
+                                                                          .shade100
                                                                       : Colors
-                                                                          .grey
-                                                                          .shade400,
+                                                                          .indigo
+                                                                          .shade100,
                                                               borderRadius:
                                                                   BorderRadius.circular(
                                                                     4,
                                                                   ),
                                                             ),
-                                                            child: Text(
-                                                              user != null
-                                                                  ? "Detay"
-                                                                  : "Giriş Gerekli",
+                                                            child: Text(LanguageProvider.translate(context, 'detail'),
                                                               style: TextStyle(
                                                                 color:
                                                                     Colors
-                                                                        .white,
-                                                                fontSize: 11
+                                                                        .deepPurpleAccent,
+                                                                fontSize: 11,
                                                               ),
                                                             ),
                                                           ),
@@ -894,8 +854,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             vertical: 8,
                                           ),
                                           color: Colors.red.withOpacity(0.8),
-                                          child: const Text(
-                                            "TAKAS GERÇEKLEŞTİRİLMİŞTİR",
+                                          child: Text(LanguageProvider.translate(context, 'swapCompleted'),
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
@@ -942,7 +901,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     showFilterMobile = false;
                                   });
                                 },
-                                child: const Text("Kapat"),
+                                child: Text(LanguageProvider.translate(context, 'close')),
                               ),
                               const SizedBox(height: 16),
                               buildFilterPanel(), // JS’deki FilterPanel bileşeni gibi
@@ -979,7 +938,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  isPinned ? 'Sıralamaya geri alındı' : 'Üste sabitlendi',
+                  LanguageProvider.translate(
+                    context,
+                    isPinned ? 'unpinned' : 'pinned',
+                  ),
                 ),
               ),
             );
@@ -994,7 +956,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
-            isPinned ? 'Kaldır' : 'Sabitle',
+            LanguageProvider.translate(
+              context,
+              isPinned ? 'unpin' : 'pin',
+            ),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w500,
@@ -1011,8 +976,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           color: Colors.deepPurple.shade100,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Text(
-          'Detay',
+        child: Text(LanguageProvider.translate(context, 'detail'),
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w500,
@@ -1033,16 +997,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                const Text(
-                  'Onay Bekleyen Kullanıcılar',
+                Text(
+                  LanguageProvider.translate(context, 'pendingUsers'),
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 Expanded(
                   child:
                       pendingRequests.isEmpty
-                          ? const Center(
-                            child: Text("Onay bekleyen kullanıcı yok."),
+                          ? Center(
+                            child:Text(
+                              LanguageProvider.translate(context, 'noPendingUsers'),
+                            ),
                           )
                           : ListView.builder(
                             controller: controller,
@@ -1081,29 +1047,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
     );
   }
-}
-
-Widget _buildRedButton({
-  required String label,
-  required VoidCallback onPressed,
-  Color color = Colors.red, // Varsayılan renk
-  Widget? trailing,
-}) {
-  return ElevatedButton(
-    onPressed: onPressed,
-    style: ElevatedButton.styleFrom(
-      backgroundColor: color,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.white)),
-        if (trailing != null) ...[const SizedBox(width: 6), trailing],
-      ],
-    ),
-  );
 }
 
 Widget _buildCompactButton({

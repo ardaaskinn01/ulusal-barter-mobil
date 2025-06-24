@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 
 import 'appDrawer.dart';
+import 'languageProvider.dart';
 
 class HakkimizdaPage extends StatelessWidget {
   const HakkimizdaPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    String t(String key) => LanguageProvider.translate(context, key);
     return Scaffold(
-        drawer: AppDrawer(parentContext: context),
-        appBar: AppBar(
-          backgroundColor: Colors.yellow[700], // Şeffaf yapabilirsin
-          elevation: 0,
-          title: const Text('Hakkımızda'),
-        ),
+      drawer: AppDrawer(parentContext: context),
+      appBar: AppBar(
+        backgroundColor: Colors.yellow[700], // Şeffaf yapabilirsin
+        elevation: 0,
+        title: Text(t('aboutUs')),
+      ),
       body: Stack(
         children: [
           Positioned.fill(
@@ -32,7 +34,8 @@ class HakkimizdaPage extends StatelessWidget {
 
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 40),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -41,12 +44,12 @@ class HakkimizdaPage extends StatelessWidget {
                         Container(
                           decoration: const BoxDecoration(
                             border: Border(
-                              bottom: BorderSide(color: Colors.yellow, width: 4),
+                              bottom: BorderSide(
+                                  color: Colors.yellow, width: 4),
                             ),
                           ),
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: const Text(
-                            'Hakkımızda',
+                          child: Text(t('aboutUs'),
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 36,
@@ -56,144 +59,112 @@ class HakkimizdaPage extends StatelessWidget {
                         ),
 
                         const SizedBox(height: 24),
-
-                        // Metin içerikleri (paragraflar)
-                        const Text(
-                          "ULUSAL Barter A.Ş. dünyada yaygın olarak kullanılan barter sisteminin, ülkemizin ticari faaliyetlerine yeni bir soluk getirmesi amacıyla kurulmuştur.",
-                          style: TextStyle(color: Colors.white, height: 1.6),
-                        ),
+                        Text(t('about1'), style: const TextStyle(color: Colors
+                            .white, height: 1.6)),
                         const SizedBox(height: 12),
-
-                        const Text(
-                          "Güçlü sermaye ve akılcı ticaret anlayışıyla, ekonomiğe katkısıyla kurumsal yapısının yanı sıra, profesyonel ekibi ile işini sahiplenen, sorunları çözme konusunda yaratıcılığını kullanan, akılcı çözümler üreten, ULUSAL Barter A.Ş. gelişmekte olan sektörün en güçlü temsilcisidir.",
-                          style: TextStyle(color: Colors.white, height: 1.6),
-                        ),
+                        Text(t('about2'), style: const TextStyle(color: Colors
+                            .white, height: 1.6)),
                         const SizedBox(height: 12),
-
-                        const Text(
-                          "Her yıl başarısını katlayarak arttıran ULUSAL Barter A.Ş. ülkenin önde gelen büyük holdingleri ile birçok ortak projede yer almış; hizmet politikası ile yer almış olduğu işlerden olumlu referanslar almıştır. Kazandığı olumlu referansların gücü ile portföyünü zenginleştiren ULUSAL Barter A.Ş. 5000 aşkın üye sayısına ulaşmıştır.",
-                          style: TextStyle(color: Colors.white, height: 1.6),
-                        ),
+                        Text(t('about3'), style: const TextStyle(color: Colors
+                            .white, height: 1.6)),
                         const SizedBox(height: 12),
-
-                        const Text(
-                          "Gün geçtikçe artmaya devam eden üye sayısının ve stratejik ortaklarının desteğiyle elde ettiği başarıları, ülkemizde gelişmekte olan barter sektörünün, yenilikçi, vizyoner ve kazançlı bir ticaret sistemi olarak tanınmasına katkıda bulunmaktadır.",
-                          style: TextStyle(color: Colors.white, height: 1.6),
-                        ),
+                        Text(t('about4'), style: const TextStyle(color: Colors
+                            .white, height: 1.6)),
                         const SizedBox(height: 12),
-
-                        const Text(
-                          "Katma değerli dış Ticaret projeleri geliştirirken;",
-                          style: TextStyle(color: Colors.white, height: 1.6),
-                        ),
+                        Text(t('about5'), style: const TextStyle(color: Colors
+                            .white, height: 1.6)),
                         const SizedBox(height: 12),
-
-                        const Text(
-                          "✓ ULUSAL Barter A.Ş. misyon, vizyon ve stratejisi ile hareket ederek, Ram iç ve Dış Ticaret olarak her türlü dışve iç ticaret operasyonunu ilgili tarafların ihtiyaç ve beklentilerini karşılayarak yapmayı,",
-                          style: TextStyle(color: Colors.white, height: 1.6),
-                        ),
+                        Text(t('about6'), style: const TextStyle(color: Colors
+                            .white, height: 1.6)),
                         const SizedBox(height: 8),
-
-                        const Text(
-                          "✓ Müşteri odaklı stratejisi ile en iyi hizmeti ve kusursuz hizmet sunmayı hedeflerken; iş ahlakı ve güvenilir duruşundan ödün vermemeyi,",
-                          style: TextStyle(color: Colors.white, height: 1.6),
-                        ),
+                        Text(t('about7'), style: const TextStyle(color: Colors
+                            .white, height: 1.6)),
                         const SizedBox(height: 8),
-
-                        const Text(
-                          "✓ 26 yıllık dış ve iç ticaret sektör tecrübesi, bilgi birikimi ve uzman ekibi ile sektöre öncü olmayı ve sektör standartları belirleyecek adımlar atarak gelişmeyi,",
-                          style: TextStyle(color: Colors.white, height: 1.6),
-                        ),
+                        Text(t('about8'), style: const TextStyle(color: Colors
+                            .white, height: 1.6)),
                         const SizedBox(height: 8),
-
-                        const Text(
-                          "✓ Ülke ekonomisine katkı sağlayacak ihracat faaliyetlerinde, kurumlara sağlayacağı finansal hizmetler ile en verimli ve optimum çözümler sunmayı,",
-                          style: TextStyle(color: Colors.white, height: 1.6),
-                        ),
+                        Text(t('about9'), style: const TextStyle(color: Colors
+                            .white, height: 1.6)),
                         const SizedBox(height: 8),
-
-                        const Text(
-                          "✓ Kusursuz hizmet misyonunu ile çalışanlarını ve etkileşim içinde olduğu ilgili taraflarını da kalite yolculuğunda birlikte yanında taşımayı ve sürekli geliştirmeyi,",
-                          style: TextStyle(color: Colors.white, height: 1.6),
-                        ),
+                        Text(t('about10'), style: const TextStyle(color: Colors
+                            .white, height: 1.6)),
                         const SizedBox(height: 8),
-
-                        const Text(
-                          "✓ Ulusal ve/veya uluslararası mevzuatlara uyum yükümlülüklerini yerine getirirken; çevreci yaklaşımlar ve sosyal sorumluluk projelerine de imza atarak ilgili tarafları ve çalışanlarının bilinç seviyesini artırmayı,",
-                          style: TextStyle(color: Colors.white, height: 1.6),
-                        ),
+                        Text(t('about11'), style: const TextStyle(color: Colors
+                            .white, height: 1.6)),
                         const SizedBox(height: 8),
-
-                        const Text(
-                          "✓ Teknolojik gelişmeleri takip ederek, inovatif yaklaşımlar ile operasyon ve hizmet kalitesini sürekli dijitalleştirmeyi,",
-                          style: TextStyle(color: Colors.white, height: 1.6),
-                        ),
+                        Text(t('about12'), style: const TextStyle(color: Colors
+                            .white, height: 1.6)),
                         const SizedBox(height: 8),
-
-                        const Text(
-                          "✓ Zor olanı başarmak ve hedeflerine ulaşmak için tüm bu faaliyetleri yürütürken bilgi birikimi ve sektör deneyimlerini kalite yönetim sistemi ile kurumsal hafızaya alarak, gelecek nesillere aktarmayı ve sistemi sürekli geliştirerek sürdürmeyi taahhüt eder.",
-                          style: TextStyle(color: Colors.white, height: 1.6),
-                        ),
+                        Text(t('about13'), style: const TextStyle(color: Colors
+                            .white, height: 1.6)),
 
                         const SizedBox(height: 40),
 
                         // Kartlar (Misyon ve Vizyon)
                         Column(
-                          children: const [
+                          children: [
                             Card(
-                              color: Color.fromRGBO(31, 41, 55, 0.8), // bg-gray-800/80
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(24)),
-                                side: BorderSide(color: Color(0xFFFFD600), width: 4), // yellow border
+                              color: const Color.fromRGBO(31, 41, 55, 0.8),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.all(
+                                    Radius.circular(24)),
+                                side: BorderSide(
+                                    color: Color(0xFFFFD600), width: 4),
                               ),
                               child: Padding(
-                                padding: EdgeInsets.all(32),
+                                padding: const EdgeInsets.all(32),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      "Misyonumuz ve Değerlerimiz",
-                                      style: TextStyle(
+                                      LanguageProvider.translate(
+                                          context, 'about14'),
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 24,
                                       ),
                                     ),
-                                    SizedBox(height: 16),
+                                    const SizedBox(height: 16),
                                     Text(
-                                      "Ülkemizin ticaret ve yatırımlar açısından çekim merkezi ve yaşam kalitesini sürekli artıran bir ülke haline getirmek, kaynakları etkin bir şekilde kullanarak geliştirdiği yenilikçi ve özgün projeler ile üyelerinin ticari faaliyetlerini kolaylaştırmak, iş dünyası ve topluma sürdürülebilir hizmetler sunmak.",
-                                      style: TextStyle(color: Colors.white, height: 1.5),
+                                      LanguageProvider.translate(
+                                          context, 'about15'),
+                                      style: const TextStyle(
+                                          color: Colors.white, height: 1.5),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-
-                            SizedBox(height: 24),
-
+                            const SizedBox(height: 24),
                             Card(
-                              color: Color.fromRGBO(31, 41, 55, 0.8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(24)),
-                                side: BorderSide(color: Color(0xFFFFD600), width: 4),
+                              color: const Color.fromRGBO(31, 41, 55, 0.8),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.all(
+                                    Radius.circular(24)),
+                                side: BorderSide(
+                                    color: Color(0xFFFFD600), width: 4),
                               ),
                               child: Padding(
-                                padding: EdgeInsets.all(32),
+                                padding: const EdgeInsets.all(32),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      "Geleceğe Yönelik Vizyonumuz",
-                                      style: TextStyle(
+                                      LanguageProvider.translate(
+                                          context, 'about16'),
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 24,
                                       ),
                                     ),
-                                    SizedBox(height: 16),
+                                    const SizedBox(height: 16),
                                     Text(
-                                      "Sürdürülebilir kalkınma amaçları doğrultusunda üyelerinin sektörel gelişim ve dönüşüm süreçlerine rehberlik eden, paydaşlarıyla birlikte değer yaratan, yaşam, ticaret ve yatırımda ülkemizin rol model Barter şirketi olmak.",
-                                      style: TextStyle(color: Colors.white, height: 1.5),
+                                      LanguageProvider.translate(
+                                          context, 'about17'),
+                                      style: const TextStyle(
+                                          color: Colors.white, height: 1.5),
                                     ),
                                   ],
                                 ),
@@ -207,7 +178,8 @@ class HakkimizdaPage extends StatelessWidget {
                         // Yönetim Kurulu
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 48, horizontal: 24),
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(
                               colors: [Color(0xFFFFD600), Color(0xFFFDB813)],
@@ -226,7 +198,7 @@ class HakkimizdaPage extends StatelessWidget {
                                 ),
                                 width: 280,
                                 child: Column(
-                                  children: const [
+                                  children: [
                                     Text(
                                       "Özkan ŞİMŞEK",
                                       style: TextStyle(
@@ -237,7 +209,7 @@ class HakkimizdaPage extends StatelessWidget {
                                     ),
                                     SizedBox(height: 4),
                                     Text(
-                                      "Yönetim Kurulu Başkanı",
+                                      t('about18'),
                                       style: TextStyle(fontSize: 14),
                                     ),
                                   ],
@@ -251,8 +223,10 @@ class HakkimizdaPage extends StatelessWidget {
                                 runSpacing: 16,
                                 alignment: WrapAlignment.center,
                                 children: [
-                                  yonetimKuruluUyeCard("Hasan ULAŞZADE", "Yönetim Kurulu Başkan Vekili"),
-                                  yonetimKuruluUyeCard("Selim ANIŞ", "Yönetim Kurulu Üyesi")
+                                  yonetimKuruluUyeCard(
+                                      context, "Hasan ULAŞZADE", 'about19'),
+                                  yonetimKuruluUyeCard(
+                                      context, "Selim ANIŞ", 'about20'),
                                 ],
                               ),
 
@@ -264,16 +238,26 @@ class HakkimizdaPage extends StatelessWidget {
                                 runSpacing: 16,
                                 alignment: WrapAlignment.center,
                                 children: [
-                                  yonetimKuruluUyeCard("Cengiz ŞİMŞEK", "Pazarlama Koordinatörü"),
-                                  yonetimKuruluUyeCard("Hüseyin ULAŞZADE", "Medya Tanıtım Koordinatörü"),
-                                  yonetimKuruluUyeCard("Burak KOÇAK", "Bilgi İşlem Koordinatörü"),
-                                  yonetimKuruluUyeCard("Mehmet KARABAĞ", "Müşteri Koordinatörü"),
-                                  yonetimKuruluUyeCard("Hüseyin GÜRER", "Müşteri Koordinatörü"),
-                                  yonetimKuruluUyeCard("Beyza Nur KOŞAR", "Hukuk Koordinatörü"),
-                                  yonetimKuruluUyeCard("Kerim ÇAKMAK", "Muhasebe Koordinatörü"),
-                                  yonetimKuruluUyeCard("Yunus GÖREL", "Emlak Koordinatörü"),
-                                  yonetimKuruluUyeCard("İbrahim KAHRAMAN", "Emlak Koordinatörü"),
-                                  yonetimKuruluUyeCard("Büşra KOLUKISA", "Müşteri Temsilcisi"),
+                                  yonetimKuruluUyeCard(
+                                      context, "Cengiz ŞİMŞEK", 'about21'),
+                                  yonetimKuruluUyeCard(
+                                      context, "Hüseyin ULAŞZADE", 'about22'),
+                                  yonetimKuruluUyeCard(
+                                      context, "Burak KOÇAK", 'about23'),
+                                  yonetimKuruluUyeCard(
+                                      context, "Mehmet KARABAĞ", 'about24'),
+                                  yonetimKuruluUyeCard(
+                                      context, "Hüseyin GÜRER", 'about24'),
+                                  yonetimKuruluUyeCard(
+                                      context, "Beyza Nur KOŞAR", 'about25'),
+                                  yonetimKuruluUyeCard(
+                                      context, "Kerim ÇAKMAK", 'about26'),
+                                  yonetimKuruluUyeCard(
+                                      context, "Yunus GÖREL", 'about27'),
+                                  yonetimKuruluUyeCard(
+                                      context, "İbrahim KAHRAMAN", 'about27'),
+                                  yonetimKuruluUyeCard(
+                                      context, "Büşra KOLUKISA", 'about28'),
                                 ],
                               ),
                             ],
@@ -293,7 +277,8 @@ class HakkimizdaPage extends StatelessWidget {
   }
 
   // Yönetim Kurulu Üye kartı oluşturucu fonksiyon
-  Widget yonetimKuruluUyeCard(String name, String title) {
+  Widget yonetimKuruluUyeCard(BuildContext context, String name,
+      String titleKey) {
     return Container(
       width: 160,
       padding: const EdgeInsets.all(16),
@@ -314,7 +299,7 @@ class HakkimizdaPage extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            title,
+            LanguageProvider.translate(context, titleKey),
             style: const TextStyle(fontSize: 12),
             textAlign: TextAlign.center,
           ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'appDrawer.dart';
+import 'languageProvider.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -60,7 +61,7 @@ class _ProfilePageState extends State<ProfilePage> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bilgiler güncellendi')),
+        SnackBar(content: Text(LanguageProvider.translate(context, 'updated'))),
       );
 
       setState(() {
@@ -78,11 +79,11 @@ class _ProfilePageState extends State<ProfilePage> {
     int maxLines = 1,
   }) {
     return Card(
-      color: Colors.blueGrey.shade900, // Koyu arka plan
+      color: Colors.blueGrey.shade900,
       elevation: 4,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.blueGrey.shade700), // İnce kenarlık
+        side: BorderSide(color: Colors.blueGrey.shade700),
       ),
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
@@ -90,18 +91,17 @@ class _ProfilePageState extends State<ProfilePage> {
         child: TextFormField(
           controller: controller,
           style: const TextStyle(
-            color: Color(0xFFFFD700), // Altın rengi yazı
+            color: Color(0xFFFFD700),
             fontWeight: FontWeight.w600,
           ),
           decoration: InputDecoration(
-            icon: Icon(icon, color: const Color(0xFFFFD700)), // Altın renk ikon
+            icon: Icon(icon, color: const Color(0xFFFFD700)),
             labelText: label,
             labelStyle: const TextStyle(
-              color: Color(0xFFFFD700), // Altın renk label
+              color: Color(0xFFFFD700),
               fontWeight: FontWeight.w600,
             ),
             border: InputBorder.none,
-            // İstersen odaklanınca altın renk alt çizgi ekleyebiliriz:
             focusedBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Color(0xFFFFD700)),
             ),
@@ -119,11 +119,14 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       drawer: AppDrawer(parentContext: context),
       appBar: AppBar(
-        title: const Text('Profilim'),
+        title: Text(LanguageProvider.translate(context, 'myProfile')),
         backgroundColor: Colors.blueGrey.shade200,
         actions: [
           IconButton(
             icon: Icon(_isEditMode ? Icons.check : Icons.edit),
+            tooltip: _isEditMode
+                ? LanguageProvider.translate(context, 'save')
+                : LanguageProvider.translate(context, 'edit'),
             onPressed: () {
               if (_isEditMode) {
                 if (_formKey.currentState!.validate()) {
@@ -163,33 +166,33 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 24),
 
               _buildProfileField(
-                label: 'Ad',
+                label: LanguageProvider.translate(context, 'firstName'),
                 icon: Icons.person,
                 controller: _adController,
                 enabled: _isEditMode,
               ),
               _buildProfileField(
-                label: 'Soyad',
+                label: LanguageProvider.translate(context, 'lastName'),
                 icon: Icons.person_outline,
                 controller: _soyadController,
                 enabled: _isEditMode,
               ),
               _buildProfileField(
-                label: 'Telefon',
+                label: LanguageProvider.translate(context, 'phone'),
                 icon: Icons.phone,
                 controller: _telefonController,
                 keyboardType: TextInputType.phone,
                 enabled: _isEditMode,
               ),
               _buildProfileField(
-                label: 'Adres',
+                label: LanguageProvider.translate(context, 'address'),
                 icon: Icons.home,
                 controller: _adresController,
                 maxLines: 2,
                 enabled: _isEditMode,
               ),
               _buildProfileField(
-                label: 'Email',
+                label: LanguageProvider.translate(context, 'email'),
                 icon: Icons.email,
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -214,9 +217,10 @@ class _ProfilePageState extends State<ProfilePage> {
                         _updateUserData();
                       }
                     },
-                    label: const Text(
-                      'Kaydet',
-                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    icon: const Icon(Icons.save, color: Colors.white),
+                    label: Text(
+                      LanguageProvider.translate(context, 'save'),
+                      style: const TextStyle(fontSize: 16, color: Colors.white),
                     ),
                   ),
                 ),

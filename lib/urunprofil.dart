@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:ulusalbarter/urunekle.dart';
 import 'package:video_player/video_player.dart';
 
+import 'languageProvider.dart';
+
 class UrunProfil extends StatefulWidget {
   final String id;
 
@@ -58,6 +60,7 @@ class _UrunProfilState extends State<UrunProfil> {
   }
 
   Future<void> toggleFavorite() async {
+    final lang = LanguageProvider.translate;
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
 
@@ -72,14 +75,14 @@ class _UrunProfilState extends State<UrunProfil> {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Favorilerden çıkarıldı')));
+      ).showSnackBar(SnackBar(content: Text(lang(context, 'favoriteRemoved'))));
     } else {
       favorites.add({'ilanId': ilanId});
       await userRef.update({'favorites': favorites});
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Favorilere eklendi')));
+      ).showSnackBar(SnackBar(content: Text(lang(context, 'favoriteAdded'))));
     }
 
     setState(() {
@@ -115,6 +118,7 @@ class _UrunProfilState extends State<UrunProfil> {
   }
 
   Future<void> showOfferDialog() async {
+    final lang = LanguageProvider.translate;
     final productId = product!.data()?['isim'];
     final userId = currentUser?.uid; // gerçek kullanıcı id
     final TextEditingController amountController = TextEditingController();
@@ -130,7 +134,7 @@ class _UrunProfilState extends State<UrunProfil> {
             borderRadius: BorderRadius.circular(16),
           ),
           title: Text(
-            'Teklif Ver',
+            lang(context, 'makeOffer'),
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             textAlign: TextAlign.center,
           ),
@@ -145,7 +149,7 @@ class _UrunProfilState extends State<UrunProfil> {
                       decimal: true,
                     ),
                     decoration: InputDecoration(
-                      labelText: 'Miktar',
+                      labelText: lang(context, 'amount'),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -279,7 +283,7 @@ class _UrunProfilState extends State<UrunProfil> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('İptal'),
+              child: Text(lang(context, 'cancel')),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -297,7 +301,7 @@ class _UrunProfilState extends State<UrunProfil> {
                 final amount = double.tryParse(rawAmount);
                 if (amount == null || amount <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Geçerli bir miktar girin')),
+                    SnackBar(content: Text(lang(context, 'invalidAmount'))),
                   );
                   return;
                 }
@@ -321,11 +325,14 @@ class _UrunProfilState extends State<UrunProfil> {
                 Navigator.of(context).pop();
 
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Teklif başarıyla gönderildi')),
+                  SnackBar(content: Text(lang(context, 'successfull'))),
                 );
               },
 
-              child: Text('Teklif Ver', style: TextStyle(color: Colors.black)),
+              child: Text(
+                lang(context, 'makeOffer'),
+                style: TextStyle(color: Colors.black),
+              ),
             ),
           ],
         );
@@ -334,6 +341,7 @@ class _UrunProfilState extends State<UrunProfil> {
   }
 
   Future<void> withdrawOffer() async {
+    final lang = LanguageProvider.translate;
     if (offerId == null) return;
 
     await _firestore.collection('offers').doc(offerId).delete();
@@ -345,7 +353,7 @@ class _UrunProfilState extends State<UrunProfil> {
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('Teklif geri çekildi')));
+    ).showSnackBar(SnackBar(content: Text(lang(context, 'withdrawnOffer'))));
   }
 
   Future<void> fetchUser() async {
@@ -366,6 +374,8 @@ class _UrunProfilState extends State<UrunProfil> {
   }
 
   Future<void> toggleSatildi() async {
+    final lang = LanguageProvider.translate;
+
     if (product == null) return;
 
     bool newValue = !isSold;
@@ -376,21 +386,21 @@ class _UrunProfilState extends State<UrunProfil> {
           (context) => AlertDialog(
             title: Text(
               newValue
-                  ? "Ürünü Satıldı Olarak İşaretle"
-                  : "Satıldı İşaretini Kaldır",
+                  ? lang(context, 'markAsSold')
+                  : lang(context, 'unMarkSold'),
             ),
             content: Text(
               newValue
-                  ? "Bu ürünü gerçekten satıldı olarak işaretlemek istiyor musunuz?"
-                  : "Bu ürünün satıldı işaretini kaldırmak istiyor musunuz?",
+                  ? lang(context, 'confirmMarkAsSold')
+                  : lang(context, 'confirmRemoveSoldMark'),
             ),
             actions: [
               TextButton(
-                child: Text("İptal"),
+                child: Text(lang(context, 'cancel')),
                 onPressed: () => Navigator.of(context).pop(false),
               ),
               TextButton(
-                child: Text("Evet"),
+                child: Text(lang(context, 'yes')),
                 onPressed: () => Navigator.of(context).pop(true),
               ),
             ],
@@ -431,7 +441,7 @@ class _UrunProfilState extends State<UrunProfil> {
     setState(() {
       currentIndex = index;
       final url = product?.data()?['ekGorselUrl'][index];
-      if (url != null && url.endsWith('.mp4')) {
+      if (url != null && url.endsWith('.mp4') || url.endsWith('.mov')) {
         _videoController = VideoPlayerController.network(url)
           ..initialize().then((_) {
             setState(() {});
@@ -463,19 +473,21 @@ class _UrunProfilState extends State<UrunProfil> {
   }
 
   Future<void> handleDelete() async {
+    final lang = LanguageProvider.translate;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder:
           (_) => AlertDialog(
-            title: Text("Ürünü Sil"),
-            content: Text("Bu ürünü silmek istediğinize emin misiniz?"),
+            title: Text(lang(context, 'deleteProduct')),
+            content: Text(lang(context, 'confirmDeleteProduct')),
             actions: [
               TextButton(
-                child: Text("İptal"),
+                child: Text(lang(context, 'cancel')),
                 onPressed: () => Navigator.pop(context, false),
               ),
               TextButton(
-                child: Text("Sil"),
+                child: Text(lang(context, 'delete')),
                 onPressed: () => Navigator.pop(context, true),
               ),
             ],
@@ -487,12 +499,13 @@ class _UrunProfilState extends State<UrunProfil> {
           .collection("products")
           .doc(widget.id)
           .delete();
-      Navigator.pop(context); // geri dön
+      Navigator.pop(context);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
     if (product == null) {
       return Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -505,7 +518,7 @@ class _UrunProfilState extends State<UrunProfil> {
     return Scaffold(
       backgroundColor: Colors.yellow.shade600,
       appBar: AppBar(
-        title: Text('Ürün Detayları'),
+        title: Text(LanguageProvider.translate(context, 'productDetails')),
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(30),
           child: Container(
@@ -518,7 +531,7 @@ class _UrunProfilState extends State<UrunProfil> {
             child: Center(
               // Burada Center ekledik
               child: Text(
-                'İlan Numarası: ${data['id'] ?? ''}',
+                '${LanguageProvider.translate(context, 'listingNumber')}${data['id'] ?? ''}',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -619,9 +632,9 @@ class _UrunProfilState extends State<UrunProfil> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.red.shade700,
                                 ),
-                                child: const Text(
-                                  "Düzenle",
-                                  style: TextStyle(color: Colors.white),
+                                child: Text(
+                                  LanguageProvider.translate(context, 'edit'),
+                                  style: const TextStyle(color: Colors.white),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -630,9 +643,9 @@ class _UrunProfilState extends State<UrunProfil> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.red,
                                 ),
-                                child: const Text(
-                                  "Sil",
-                                  style: TextStyle(color: Colors.white),
+                                child: Text(
+                                  LanguageProvider.translate(context, 'delete'),
+                                  style: const TextStyle(color: Colors.white),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -646,8 +659,14 @@ class _UrunProfilState extends State<UrunProfil> {
                                 ),
                                 child: Text(
                                   isSold
-                                      ? "İşareti Geri Al"
-                                      : "Satıldı İşaretle",
+                                      ? LanguageProvider.translate(
+                                        context,
+                                        'unmarkSold',
+                                      )
+                                      : LanguageProvider.translate(
+                                        context,
+                                        'markAsSold',
+                                      ),
                                   style: const TextStyle(color: Colors.white),
                                 ),
                               ),
@@ -656,69 +675,101 @@ class _UrunProfilState extends State<UrunProfil> {
                         ],
                       )
                       : Center(
-                        child: Row(
+                        child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            // 💰 FİYAT
                             Container(
                               padding: EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: Colors.red.shade100,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Text(
-                                RegExp(
-                                      r'\d\s*(₺|\$|€)$',
-                                    ).hasMatch(fiyat.toString().trim())
-                                    ? fiyat.toString().trim()
-                                    : '$fiyat ₺',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.red,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
+                              child:
+                                  user == null
+                                      ? Text(
+                                        LanguageProvider.translate(
+                                          context,
+                                          'loginToSeePrice',
+                                        ),
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      )
+                                      : Text(
+                                        RegExp(
+                                              r'\d\s*(₺|\$|€)$',
+                                            ).hasMatch(fiyat.toString().trim())
+                                            ? fiyat.toString().trim()
+                                            : '$fiyat ₺',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(height: 12),
 
-                            // 🔴 Eğer satıldıysa teklif butonunu gösterme
-                            if (!isSold) ...[
-                              ElevatedButton(
-                                onPressed: () {
-                                  if (hasOffer) {
-                                    withdrawOffer();
-                                  } else {
-                                    showOfferDialog();
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      hasOffer ? Colors.grey : Colors.green,
-                                ),
-                                child: Text(
-                                  hasOffer ? 'Teklifi Geri Çek' : 'Teklif Ver',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
+                            // 🎯 BUTONLAR
+                            if (!isSold)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      if (hasOffer) {
+                                        withdrawOffer();
+                                      } else {
+                                        showOfferDialog();
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          hasOffer ? Colors.grey : Colors.green,
+                                    ),
+                                    child: Text(
+                                      hasOffer
+                                          ? LanguageProvider.translate(
+                                            context,
+                                            'withdrawOffer',
+                                          )
+                                          : LanguageProvider.translate(
+                                            context,
+                                            'makeOffer',
+                                          ),
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
 
-                              /// ⭐ FAVORİLERE EKLE BUTONU
-                              ElevatedButton.icon(
-                                onPressed: toggleFavorite,
-                                label: Text(
-                                  isFavorited
-                                      ? 'Favorilerden Çıkar'
-                                      : 'Favorilere Ekle',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
+                                  ElevatedButton.icon(
+                                    onPressed: toggleFavorite,
+                                    label: Text(
                                       isFavorited
-                                          ? Colors.grey
-                                          : Colors.red[300],
-                                ),
+                                          ? LanguageProvider.translate(
+                                            context,
+                                            'removeFavorite',
+                                          )
+                                          : LanguageProvider.translate(
+                                            context,
+                                            'addFavorite',
+                                          ),
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          isFavorited
+                                              ? Colors.grey
+                                              : Colors.red[300],
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
                           ],
                         ),
                       ),
@@ -734,7 +785,7 @@ class _UrunProfilState extends State<UrunProfil> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Ürün Detayları",
+                        LanguageProvider.translate(context, 'productDetails'),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -753,7 +804,7 @@ class _UrunProfilState extends State<UrunProfil> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Diğer Medya",
+                        LanguageProvider.translate(context, 'otherMedia'),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -771,7 +822,7 @@ class _UrunProfilState extends State<UrunProfil> {
                               width: 100,
                               height: 100,
                               child:
-                                  url.endsWith('.mp4')
+                                  url.endsWith('.mp4') || url.endsWith('.mov')
                                       ? Icon(Icons.videocam, size: 48)
                                       : Image.network(url, fit: BoxFit.cover),
                               decoration: BoxDecoration(
@@ -798,7 +849,12 @@ class _UrunProfilState extends State<UrunProfil> {
                     color: Colors.black54,
                     child: Center(
                       child:
-                          ekGorseller[currentIndex!].endsWith('.mp4')
+                          (ekGorseller[currentIndex!].toLowerCase().endsWith(
+                                    '.mp4',
+                                  ) ||
+                                  ekGorseller[currentIndex!]
+                                      .toLowerCase()
+                                      .endsWith('.mov'))
                               ? (_videoController?.value.isInitialized ?? false)
                                   ? AspectRatio(
                                     aspectRatio:

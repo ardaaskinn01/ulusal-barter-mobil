@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
-
-import 'bakiyegecmisi.dart';
+import 'languageProvider.dart';
+import 'bakiyegecmisi.dart'; // geçmiş ekranınız varsa
 
 class Bakiye extends StatelessWidget {
   const Bakiye({Key? key}) : super(key: key);
 
-  static const Color goldColor = Color(0xFFFFD700); // Altın rengi
+  static const Color goldColor = Color(0xFFFFD700);
 
   void _showBakiyeDialog({
     required BuildContext context,
@@ -18,7 +17,10 @@ class Bakiye extends StatelessWidget {
   }) {
     final TextEditingController amountController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
-    final String title = isAdding ? 'Bakiye Ekle' : 'Bakiye Çıkar';
+
+    final title = isAdding
+        ? LanguageProvider.translate(context, 'addBalance')
+        : LanguageProvider.translate(context, 'removeBalance');
 
     showDialog(
       context: context,
@@ -34,12 +36,12 @@ class Bakiye extends StatelessWidget {
                 keyboardType: TextInputType.number,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
-                  _ThousandsSeparatorFormatter(), // Noktalı biçimlendirme
+                  _ThousandsSeparatorFormatter(),
                 ],
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: 'Miktar',
-                  hintStyle: TextStyle(color: Colors.white60),
+                decoration: InputDecoration(
+                  hintText: LanguageProvider.translate(context, 'amount'),
+                  hintStyle: const TextStyle(color: Colors.white60),
                 ),
               ),
               const SizedBox(height: 12),
@@ -47,9 +49,9 @@ class Bakiye extends StatelessWidget {
                 controller: descriptionController,
                 maxLines: 2,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: 'Açıklama',
-                  hintStyle: TextStyle(color: Colors.white60),
+                decoration: InputDecoration(
+                  hintText: LanguageProvider.translate(context, 'description'),
+                  hintStyle: const TextStyle(color: Colors.white60),
                 ),
               ),
             ],
@@ -57,7 +59,10 @@ class Bakiye extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('İptal', style: TextStyle(color: Colors.white)),
+              child: Text(
+                LanguageProvider.translate(context, 'cancel'),
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -65,14 +70,13 @@ class Bakiye extends StatelessWidget {
                 foregroundColor: Colors.black,
               ),
               onPressed: () async {
-                // Noktaları kaldırarak sayıya çevir
                 final input = amountController.text.trim().replaceAll('.', '');
                 final num? miktar = num.tryParse(input);
                 final aciklama = descriptionController.text.trim();
 
                 if (miktar == null || miktar <= 0 || aciklama.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Geçerli bir miktar ve açıklama girin')),
+                    SnackBar(content: Text(LanguageProvider.translate(context, 'invalidInput'))),
                   );
                   return;
                 }
@@ -83,7 +87,7 @@ class Bakiye extends StatelessWidget {
 
                 if (!isAdding && mevcutBakiye - miktar < 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Bakiye sıfırın altına inemez!')),
+                    SnackBar(content: Text(LanguageProvider.translate(context, 'belowZeroError'))),
                   );
                   return;
                 }
@@ -93,7 +97,11 @@ class Bakiye extends StatelessWidget {
 
                 await firestore.collection('users').doc(userId).update({'bakiye': yeniBakiye});
 
-                await firestore.collection('users').doc(userId).collection('bakiye_gecmisi').add({
+                await firestore
+                    .collection('users')
+                    .doc(userId)
+                    .collection('bakiye_gecmisi')
+                    .add({
                   'miktar': miktar,
                   'aciklama': aciklama,
                   'islemTuru': isAdding ? 'ekle' : 'çıkar',
@@ -102,14 +110,16 @@ class Bakiye extends StatelessWidget {
 
                 Navigator.pop(context);
               },
-              child: Text(isAdding ? 'Ekle' : 'Çıkar'),
+              child: Text(LanguageProvider.translate(
+                context,
+                isAdding ? 'add' : 'remove',
+              )),
             ),
           ],
         );
       },
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +128,7 @@ class Bakiye extends StatelessWidget {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text('Bakiye Takip'),
+        title: Text(LanguageProvider.translate(context, 'balanceTracking')),
         backgroundColor: goldColor,
         foregroundColor: Colors.black,
       ),
@@ -129,7 +139,9 @@ class Bakiye extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(child: Text('Hata oluştu'));
+            return Center(
+              child: Text(LanguageProvider.translate(context, 'errorOccurred')),
+            );
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -139,7 +151,9 @@ class Bakiye extends StatelessWidget {
           final docs = snapshot.data!.docs;
 
           if (docs.isEmpty) {
-            return const Center(child: Text('Kayıtlı kullanıcı bulunamadı'));
+            return Center(
+              child: Text(LanguageProvider.translate(context, 'noUsersFound')),
+            );
           }
 
           return ListView.builder(
@@ -174,7 +188,7 @@ class Bakiye extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Bakiye: ₺${bakiye.toStringAsFixed(2)}',
+                        '${LanguageProvider.translate(context, 'balance')}: ₺${bakiye.toStringAsFixed(2)}',
                         style: const TextStyle(color: goldColor),
                       ),
                       const SizedBox(height: 12),
@@ -184,11 +198,12 @@ class Bakiye extends StatelessWidget {
                         children: [
                           ElevatedButton(
                             onPressed: () => _showBakiyeDialog(
-                                context: context,
-                                userId: userId,
-                                mevcutBakiye: bakiye,
-                                isAdding: true),
-                            child: const Text('Ekle'),
+                              context: context,
+                              userId: userId,
+                              mevcutBakiye: bakiye,
+                              isAdding: true,
+                            ),
+                            child: Text(LanguageProvider.translate(context, 'add')),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: goldColor,
                               foregroundColor: Colors.black,
@@ -196,11 +211,12 @@ class Bakiye extends StatelessWidget {
                           ),
                           ElevatedButton(
                             onPressed: () => _showBakiyeDialog(
-                                context: context,
-                                userId: userId,
-                                mevcutBakiye: bakiye,
-                                isAdding: false),
-                            child: const Text('Çıkar'),
+                              context: context,
+                              userId: userId,
+                              mevcutBakiye: bakiye,
+                              isAdding: false,
+                            ),
+                            child: Text(LanguageProvider.translate(context, 'remove')),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.red.shade700,
                               foregroundColor: Colors.black,
@@ -211,10 +227,11 @@ class Bakiye extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => BakiyeGecmisiScreen(userId: userId)),
+                                  builder: (_) => BakiyeGecmisiScreen(userId: userId),
+                                ),
                               );
                             },
-                            child: const Text('Geçmiş'),
+                            child: Text(LanguageProvider.translate(context, 'history')),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blueAccent,
                               foregroundColor: Colors.black,
@@ -268,4 +285,3 @@ class _ThousandsSeparatorFormatter extends TextInputFormatter {
     return buffer.toString().split('').reversed.join();
   }
 }
-
