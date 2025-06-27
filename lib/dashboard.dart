@@ -351,7 +351,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             _buildCompactButton(
-                              label: 'Bakiye Takip',
+                              label: LanguageProvider.translate(context, 'balanceTracking'),
                               color: Colors.red[900]!,
                               onPressed: () {
                                 Navigator.push(
@@ -362,9 +362,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 );
                               },
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             _buildCompactButton(
-                              label: 'Ürün Ekle',
+                              label: LanguageProvider.translate(context, 'addProduct'),
                               color: Colors.red[700]!,
                               onPressed: () {
                                 Navigator.push(
@@ -375,24 +375,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 );
                               },
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             _buildCompactButton(
-                              label: 'İstekler',
+                              label: LanguageProvider.translate(context, 'requests'),
                               color: Colors.red[500]!,
-                              trailing:
-                                  pendingRequests.isNotEmpty
-                                      ? CircleAvatar(
-                                        radius: 10,
-                                        backgroundColor: Colors.white,
-                                        child: Text(
-                                          '${pendingRequests.length}',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.red,
-                                          ),
-                                        ),
-                                      )
-                                      : null,
+                              trailing: pendingRequests.isNotEmpty
+                                  ? CircleAvatar(
+                                radius: 10,
+                                backgroundColor: Colors.white,
+                                child: Text(
+                                  '${pendingRequests.length}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              )
+                                  : null,
                               onPressed: () {
                                 showModalBottomSheet(
                                   context: context,
@@ -407,9 +406,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 );
                               },
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             _buildCompactButton(
-                              label: 'Teklifler',
+                              label: LanguageProvider.translate(context, 'offers'),
                               color: Colors.red[400]!,
                               onPressed: () {
                                 Navigator.push(
@@ -422,7 +421,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             const SizedBox(width: 8),
                             _buildCompactButton(
-                              label: 'Filtre',
+                              label: LanguageProvider.translate(context, 'filter'),
                               color: Colors.red[200]!,
                               onPressed: () {
                                 setState(() {
